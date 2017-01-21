@@ -24,6 +24,7 @@
 ### Registry
 * Single instance within the system
 * Should run as a foreground process, accepting commands while running
+* Accept command line arguments as `java cs455.overlay.node.Registry <portnum>`
 * Allow messaging nodes to register with it (thus it keeps information about all the nodes in the overlay)
   * Should check if the IP address and port number in the request match with that of the requesting node
   * Should also check against double registration
@@ -62,6 +63,7 @@
 
 ### Messaging nodes
 * Should run as a foreground process, accepting commands while running
+* Accept command line arguments as `java cs455.overlay.node.MessagingNode <registry-host> <registry-port>`
 * Register with the registry when starting up for the first time.
   * Register IP address and port
   * Should be possible to register messaging nodes running on the same host, but communicating over different ports
