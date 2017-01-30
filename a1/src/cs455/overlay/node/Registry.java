@@ -1,9 +1,10 @@
 package cs455.overlay.node;
 
+import cs455.overlay.util.Interpreter;
 import cs455.overlay.wireformats.EventType;
+
 import java.io.*;
 import java.lang.IllegalArgumentException;
-import cs455.util.Interpreter;
 
 public class Registry implements Node {
 	
