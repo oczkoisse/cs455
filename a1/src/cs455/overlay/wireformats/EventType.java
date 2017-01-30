@@ -1,7 +1,8 @@
 package cs455.overlay.wireformats;
 
 public enum EventType {
-	
+	// Use ordinal() to convert these to int starting with 0
+	// Note that changing order will also change ordinal values
 	REGISTER_REQUEST,
 	REGISTER_RESPONSE,
 	DEREGISTER_REQUEST,
@@ -12,5 +13,4 @@ public enum EventType {
 	TASK_COMPLETE,
 	PULL_TRAFFIC_SUMMARY,
 	TRAFFIC_SUMMARY
-
 }
