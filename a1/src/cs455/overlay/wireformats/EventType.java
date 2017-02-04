@@ -12,5 +12,9 @@ public enum EventType {
 	MESSAGE,
 	TASK_COMPLETE,
 	PULL_TRAFFIC_SUMMARY,
-	TRAFFIC_SUMMARY
+	TRAFFIC_SUMMARY;
+	
+	// Cache to allow efficient access by ordinal number
+	public static final EventType[] values = values();
+	
 }
