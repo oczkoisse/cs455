@@ -7,11 +7,11 @@ import java.io.IOException;
 
 public class RegisterResponse implements Event {
 	
-	private boolean status;
+	private byte status;
 	
 	private String info;
 
-	public RegisterResponse(boolean status, String info)
+	public RegisterResponse(byte status, String info)
 	{
 		this.status = status;
 		this.info = info;
@@ -25,7 +25,7 @@ public class RegisterResponse implements Event {
 				DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(bout)))
 		{
 			dout.writeInt(this.getType().ordinal());
-			dout.writeBoolean(status);
+			dout.writeByte(status);
 			dout.writeUTF(info);
 
 			dout.flush();

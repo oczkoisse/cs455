@@ -15,6 +15,6 @@ public enum EventType {
 	TRAFFIC_SUMMARY;
 	
 	// Cache to allow efficient access by ordinal number
-	public static final EventType[] values = values();
+	public static final EventType[] valuesArr = EventType.values();
 	
 }
