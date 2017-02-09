@@ -12,6 +12,9 @@ public class MessagingNode implements Node {
 	private String registryIp;
 	private int registryPort;
 	private Socket registryConnection;
+	private TCPSender registrySender;
+	
+	private MessagingNodeListener messagingNodeListener;
 	
 	private boolean connectToRegistry()
 	{
@@ -19,18 +22,58 @@ public class MessagingNode implements Node {
 		try
 		{
 			registryConnection = new Socket(registryIp, registryPort);
+			registrySender = new TCPSender(registryConnection);
 			success = true;
 		}
 		catch(IOException e)
 		{
 			System.out.println(e.getMessage());
+			System.exit(0);
 		}
+		
 		return success;
+	}
+	
+	public void register()
+	{
+		if (connectToRegistry())
+		{
+			System.out.println("Connected to registry");
+			try
+			{
+				RegisterRequest ev = new RegisterRequest(registryConnection.getLocalAddress().getHostAddress(), registryConnection.getLocalPort());
+				registrySender.send(ev.getBytes());
+				System.out.println("Sending register request");
+			}
+			catch (IOException e)
+			{
+				System.out.println(e.getMessage());
+				System.exit(0);
+			}
+		}
+		else
+			System.out.println("Can't connect to registry");
 	}
 	
 	@Override
 	public void onEvent(Event ev) {
-
+		
+		switch(ev.getType())
+		{
+		case REGISTER_RESPONSE:
+			System.out.println(((RegisterResponse) ev).getInfo());
+			break;
+		case MESSAGING_NODES_LIST:
+			break;
+		case LINK_WEIGHTS:
+			break;
+		case TASK_INITIATE:
+			break;
+		case PULL_TRAFFIC_SUMMARY:
+			break;
+		default:
+			break;
+		}
 	}
 	
 	public MessagingNode(String registryIp, int registryPort)
@@ -38,15 +81,10 @@ public class MessagingNode implements Node {
 		this.registryIp = registryIp;
 		this.registryPort = registryPort;
 		
-		if(connectToRegistry())
-		{
-			System.out.println("Connected to Registry");
-		}
-		else
-		{
-			System.out.println("Unable to connect to Registry");
-			System.exit(0);
-		}
+		this.messagingNodeListener = new MessagingNodeListener();
+		
+		new Thread(this.messagingNodeListener).start();
+		
 	}
 	
 	public static void main(String[] args)
@@ -59,12 +97,11 @@ public class MessagingNode implements Node {
 			// Initialize this messaging node
 			MessagingNode m = new MessagingNode(registryIp, registryPort);
 			
-			// Weird syntax to initialize the nested class from the enclosing class object
-			MessagingNodeInterpreter mp = m.new MessagingNodeInterpreter(">> ", 3);
-			MessagingNodeListener ml = m.new MessagingNodeListener();
+			m.register();
 			
-			ml.run();
-			mp.run();
+			//m.new MessagingNodeInterpreter().run();
+			
+			//Dead code follows
 			
 		}
 		else
@@ -98,7 +135,7 @@ public class MessagingNode implements Node {
 		
 		private Event readEventRegisterResponse() throws IOException
 		{
-			byte status = super.din.readByte();
+			boolean status = super.din.readByte() == 1 ? true : false;
 			String additionalInfo = super.din.readUTF();
 			
 			return new RegisterResponse(status, additionalInfo);
@@ -140,9 +177,9 @@ public class MessagingNode implements Node {
 
 	private class MessagingNodeInterpreter extends Interpreter
 	{
-		public MessagingNodeInterpreter(String prompt, int maxTries)
+		public MessagingNodeInterpreter()
 		{
-			super(prompt, maxTries);
+			super(">> ", 0);
 		}
 		
 		private boolean handlePrintShortestPath()

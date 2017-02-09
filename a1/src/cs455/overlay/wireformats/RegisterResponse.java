@@ -11,9 +11,9 @@ public class RegisterResponse implements Event {
 	
 	private String info;
 
-	public RegisterResponse(byte status, String info)
+	public RegisterResponse(boolean status, String info)
 	{
-		this.status = status;
+		this.status = status ? (byte) 1 : (byte) 0;
 		this.info = info;
 	}
 	@Override
@@ -35,6 +35,16 @@ public class RegisterResponse implements Event {
 			
 		return bytes;
 			
+	}
+	
+	public boolean getStatus()
+	{
+		return (status == (byte) 1) ? true : false;
+	}
+	
+	public String getInfo()
+	{
+		return info;
 	}
 
 	@Override

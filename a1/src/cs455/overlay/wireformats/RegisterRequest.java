@@ -4,14 +4,15 @@ import java.io.*;
 
 public class RegisterRequest implements Event 
 {
-	private final String hostName;
-	private final int port;
+	private final String msgNodeIpAddress;
+	private final int msgNodePort;
 	
-	public RegisterRequest(String hostName, int port)
+	public RegisterRequest(String msgNodeIpAddress, int msgNodePort)
 	{
-		this.hostName = hostName;
-		this.port = port;
+		this.msgNodeIpAddress = msgNodeIpAddress;
+		this.msgNodePort = msgNodePort;
 	}
+	
 	
 	@Override
 	public EventType getType()
@@ -28,8 +29,8 @@ public class RegisterRequest implements Event
 			DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(bout)))
 		{
 			dout.writeInt(this.getType().ordinal());
-			dout.writeUTF(hostName);
-			dout.writeInt(port);
+			dout.writeUTF(msgNodeIpAddress);
+			dout.writeInt(msgNodePort);
 			dout.flush();
 			
 			bytes = bout.toByteArray();
@@ -38,13 +39,13 @@ public class RegisterRequest implements Event
 		return bytes;
 	}
 	
-	public String getHostName()
+	public String getIpAddress()
 	{
-		return hostName;
+		return msgNodeIpAddress;
 	}
 	
 	public int getPort()
 	{
-		return port;
+		return msgNodePort;
 	}
 }

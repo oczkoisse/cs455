@@ -11,31 +11,33 @@ import java.util.HashMap;
 public class Registry implements Node {
 	
 	private static int portnum;
+	private static Registry instance;
 	
-	private static final Registry instance = new Registry(Registry.portnum);
+	private HashMap<String, Socket> registeredNodes = new HashMap<String, Socket>();
 	
-	private HashMap<String, Socket> registerdNodes = new HashMap<String, Socket>();
-	
-	private final RegistryListener registryListener = new RegistryListener(Registry.portnum);
-	private final RegistryInterpreter registryInterpreter = new RegistryInterpreter(">> ", 0);
+	private static RegistryListener registryListener;
 	
 	private Registry(int portnum)
 	{
 		Registry.portnum = portnum;
-
-		Thread t = new Thread(registryListener);
-		t.setName("Registry Listener");
-		t.start();
-	}
-	
-	public static Registry getInstance()
-	{
-			return instance;
 	}
 	
 	public static void init(int portnum)
 	{
-		Registry.portnum = portnum;
+		if (instance == null)
+		{
+			Registry.instance = new Registry(portnum);
+			Registry.registryListener = Registry.instance.new RegistryListener(Registry.portnum);
+			Thread t  = new Thread(Registry.registryListener);
+			t.setName("Registry Listener");
+			t.start();
+		}
+	}
+	
+	
+	public static Registry getInstance()
+	{
+			return instance;
 	}
 	
 	@Override
@@ -43,9 +45,8 @@ public class Registry implements Node {
 		switch(ev.getType())
 		{
 		case REGISTER_REQUEST:
-			onEvent((RegisterRequest) ev);
 			break;
-		case DEREGISTER_REQUEST:
+		case DEREGISTER_REQUEST: 
 			onEvent((DeregisterRequest) ev);
 			break;
 		default:
@@ -54,7 +55,51 @@ public class Registry implements Node {
 
 	}
 	
-	private void onEvent(RegisterRequest ev)
+	private String getKey(RegisterRequest ev)
+	{
+		return ev.getIpAddress() + ":" + ev.getPort();
+	}
+	
+	private void handleRegistration(RegisterRequest ev, Socket s)
+	{	
+		String key = getKey(ev);
+		String msg = null;
+		boolean status = false;
+		synchronized(registeredNodes)
+		{
+			if(!registeredNodes.containsKey(key))
+			{
+				if(s.getInetAddress().getHostAddress().equals(ev.getIpAddress()) && s.getPort() == ev.getPort() )
+				{
+					registeredNodes.put(key, s);
+					msg = "Registration successfull. Currently connected node count is " + registeredNodes.size();
+					status = true;
+				}
+				else
+				{
+					msg = "Registration unsuccessfull because of IP address mismatch";
+				}
+			}
+			else
+			{
+				msg = "Registration unsuccessfull because node is already registered";
+			}
+		}
+		System.out.println(msg);
+		try
+		{
+			TCPSender t = new TCPSender(s);
+			RegisterResponse evr = new RegisterResponse(status, msg);
+			t.send(evr.getBytes());
+		}
+		catch(IOException e)
+		{
+			System.out.println(e.getMessage());
+			System.exit(0);
+		}
+	}
+	
+	private void onEvent(DeregisterRequest ev)
 	{
 		
 	}
@@ -65,11 +110,11 @@ public class Registry implements Node {
 		if (args.length == 1)
 		{
 			int portnum = Integer.parseInt(args[0]);
+			
 			Registry.init(portnum);
 			
-			
-			Registry.getInstance().registryInterpreter.run();
-			
+			Registry.getInstance().new RegistryInterpreter().run();
+			// Dead code follows
 		}
 		else
 		{
@@ -88,6 +133,7 @@ public class Registry implements Node {
 		public void handleClient(Socket s)
 		{
 			Thread t = new Thread(new RegistryReceiver(s));
+			t.setName("Registry receiver - " + s.toString());
 			t.start();
 		}
 	}
@@ -95,14 +141,14 @@ public class Registry implements Node {
 	private class RegistryReceiver extends TCPReceiverThread
 	{
 		public RegistryReceiver(Socket s)
-		{
+		{	
 			super(s);
 		}
 		
 		private Event readEventRegisterRequest() throws IOException
 		{
 			String ip = super.din.readUTF();
-			int port = super.din.readInt();
+			int port = super.din.readInt();			
 			return new RegisterRequest(ip, port);
 		}
 		
@@ -122,9 +168,11 @@ public class Registry implements Node {
 				{
 				case REGISTER_REQUEST:
 					ev = readEventRegisterRequest();
+					handleRegistration((RegisterRequest) ev, super.sock);
 					break;
 				case DEREGISTER_REQUEST:
 					ev = readEventDeregisterRequest();
+					Registry.getInstance().onEvent(ev);
 					break;
 				case TRAFFIC_SUMMARY:
 				case TASK_COMPLETE:
@@ -138,20 +186,16 @@ public class Registry implements Node {
 			catch(IOException e)
 			{
 				System.out.println("Can't read event: " + e.getMessage());
-				System.exit(0);
 			}
-			
-			if (ev != null)
-				Registry.getInstance().onEvent(ev);
 		}
 	}
 
 	private class RegistryInterpreter extends Interpreter
 	{
 		
-		public RegistryInterpreter(String prompt, int maxTries)
+		public RegistryInterpreter()
 		{
-			super(prompt, maxTries);
+			super(">> ", 0);
 		}
 		
 		private boolean handleSingleWordCommands(String[] words)

@@ -9,9 +9,9 @@ public abstract class TCPReceiverThread implements Runnable {
 	protected Socket sock;
 	protected DataInputStream din;
 	
-	public TCPReceiverThread(Socket s)
+	public TCPReceiverThread(Socket sock)
 	{
-		sock = s;
+		this.sock = sock;
 		try
 		{
 			din = new DataInputStream(sock.getInputStream());
@@ -21,20 +21,23 @@ public abstract class TCPReceiverThread implements Runnable {
 			System.out.println("Unable to retrieve input stream from socket: " + e.getMessage());
 			System.exit(0);
 		}
-		
 	}
 	
 	public abstract void handleEvent(EventType evType);
+	
+	private EventType readEventType() throws IOException
+	{
+		int ordinalEvent = din.readInt();
+		return EventType.valuesArr [ ordinalEvent ];
+	}
 	
 	public void run()
 	{
 		try
 		{
-			int ordinalEvent;
-			while(true)
+			while (true)
 			{
-				ordinalEvent = din.readInt();
-				EventType evType = EventType.valuesArr [ ordinalEvent ];
+				EventType evType = readEventType();
 				handleEvent(evType);
 			}
 		}
@@ -42,12 +45,12 @@ public abstract class TCPReceiverThread implements Runnable {
 		{
 			System.out.println("Remote socket closed: " + sock.getRemoteSocketAddress().toString() );
 		}
+		
 		catch(IOException e)
 		{
 			System.out.println("Can't read event: " + e.getMessage());
-			System.exit(0);
 		}
-		
+
 		try
 		{
 			din.close();

@@ -19,4 +19,9 @@ public class TCPSender {
 		dout.write(data);
 		dout.flush();
 	}
+	
+	public Socket getSock()
+	{
+		return sock;
+	}
 }

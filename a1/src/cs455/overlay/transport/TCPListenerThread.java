@@ -30,8 +30,9 @@ public abstract class TCPListenerThread implements Runnable {
 	{
 		while (true)
 		{
-			try(Socket s = sock.accept())
+			try
 			{
+				Socket s = sock.accept();
 				handleClient(s);
 			}
 			catch(IOException e)
