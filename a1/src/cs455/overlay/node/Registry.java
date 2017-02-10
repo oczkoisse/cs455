@@ -97,6 +97,13 @@ public class Registry implements Node {
 		}
 	}
 	
+	
+	
+	private void setupOverlay(int numConnections)
+	{
+		
+	}
+	
 	private void onEvent(DeregisterRequest ev)
 	{
 		String key = ev.getIpAddress() + ":" + ev.getPort();
@@ -249,9 +256,11 @@ public class Registry implements Node {
 			
 			if (words.length == 2)
 			{
-				try{
+				try
+				{
 					int numCon = Integer.parseInt(words[1]);
-					// Registry should take over from here
+					setupOverlay(numCon);
+					
 				}
 				catch(NumberFormatException e)
 				{
@@ -269,7 +278,12 @@ public class Registry implements Node {
 		
 		private boolean handleSendOverlayLinkWeights(String[] words)
 		{
-			return this.handleSingleWordCommands(words);
+			boolean isValid = handleSingleWordCommands(words);
+			if (isValid)
+			{
+				
+			}
+			return isValid;
 		}
 		
 		private boolean handleStart(String[] words)
