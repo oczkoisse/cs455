@@ -182,16 +182,29 @@ public class MessagingNode implements Node {
 			super(">> ", 0);
 		}
 		
-		private boolean handlePrintShortestPath()
+		private boolean handleSingleWordCommands(String[] words)
 		{
-			// Messaging node should take over from here
-			return true;
+			boolean isValid = true;
+			
+			if (words.length != 1)
+			{		
+				isValid = false;
+			}
+			
+			if (!isValid)
+				System.out.println("Usage: " + words[0]);
+			
+			return isValid;
 		}
 		
-		private boolean handleExitOverlay()
+		private boolean handlePrintShortestPath(String[] words)
 		{
-			// Messaging node should take over from here
-			return true;
+			return handleSingleWordCommands(words);
+		}
+		
+		private boolean handleExitOverlay(String[] words)
+		{
+			return handleSingleWordCommands(words);
 		}
 		
 		public boolean handleCommand(String cmd)
@@ -205,10 +218,10 @@ public class MessagingNode implements Node {
 				switch(words[0].trim())
 				{
 				case "print-shortest-path":
-					isValid = this.handlePrintShortestPath();
+					isValid = handlePrintShortestPath(words);
 					break;
 				case "exit-overlay":
-					isValid = this.handleExitOverlay();
+					isValid = handleExitOverlay(words);
 					break;
 				default: 
 					System.out.println("Unknown command: " + words[0]);
