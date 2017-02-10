@@ -55,14 +55,10 @@ public class Registry implements Node {
 
 	}
 	
-	private String getKey(RegisterRequest ev)
-	{
-		return ev.getIpAddress() + ":" + ev.getPort();
-	}
 	
 	private void handleRegistration(RegisterRequest ev, Socket s)
 	{	
-		String key = getKey(ev);
+		String key = ev.getIpAddress() + ":" + ev.getPort();
 		String msg = null;
 		boolean status = false;
 		synchronized(registeredNodes)
@@ -77,7 +73,9 @@ public class Registry implements Node {
 				}
 				else
 				{
-					msg = "Registration unsuccessfull because of IP address mismatch";
+					msg = "Registration unsuccessfull because of IP address mismatch between " 
+						+ s.getInetAddress().getHostAddress() + ":" + s.getPort() + " and "
+						+ ev.getIpAddress() + ":" + ev.getPort();
 				}
 			}
 			else
@@ -101,7 +99,29 @@ public class Registry implements Node {
 	
 	private void onEvent(DeregisterRequest ev)
 	{
-		
+		String key = ev.getIpAddress() + ":" + ev.getPort();
+		String msg = null;
+		synchronized(registeredNodes)
+		{
+			if(registeredNodes.containsKey(key))
+			{
+				Socket s = registeredNodes.get(key);
+				if(s.getInetAddress().getHostAddress().equals(ev.getIpAddress()) && s.getPort() == ev.getPort() )
+				{
+					registeredNodes.remove(key);
+					msg = "Deregistration successfull. Currently connected node count is " + registeredNodes.size();
+				}
+				else
+				{
+					msg = "Deregistration unsuccessfull because of IP address mismatch";
+				}
+			}
+			else
+			{
+				msg = "Deregistration unsuccessfull since node is not even registered";
+			}
+		}
+		System.out.println(msg);
 	}
 	
 	
@@ -215,12 +235,12 @@ public class Registry implements Node {
 		
 		private boolean handleListMessagingNodes(String[] words)
 		{
-			return this.handleSingleWordCommands(words);
+			return handleSingleWordCommands(words);
 		}
 		
 		private boolean handleListWeights(String[] words)
 		{
-			return this.handleSingleWordCommands(words);
+			return handleSingleWordCommands(words);
 		}
 		
 		private boolean handleSetupOverlay(String[] words)

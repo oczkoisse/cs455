@@ -48,4 +48,5 @@ public class RegisterRequest implements Event
 	{
 		return msgNodePort;
 	}
+	
 }

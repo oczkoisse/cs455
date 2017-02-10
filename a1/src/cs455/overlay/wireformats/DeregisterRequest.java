@@ -7,13 +7,13 @@ import java.io.IOException;
 
 public class DeregisterRequest implements Event {
 
-	private String ipAddress;
-	private int portnum;
+	private String msgNodeIpAddress;
+	private int msgNodePort;
 	
-	public DeregisterRequest(String ip, int port)
+	public DeregisterRequest(String msgNodeIpAddress, int msgNodePort)
 	{
-		ipAddress = ip;
-		portnum = port;
+		this.msgNodeIpAddress = msgNodeIpAddress;
+		this.msgNodePort = msgNodePort;
 	}
 	
 	@Override
@@ -32,8 +32,8 @@ public class DeregisterRequest implements Event {
 		{
 			dout.writeInt(this.getType().ordinal());
 			
-			dout.writeUTF(ipAddress);
-			dout.writeInt(portnum);
+			dout.writeUTF(msgNodeIpAddress);
+			dout.writeInt(msgNodePort);
 			
 			dout.flush();
 			
@@ -41,6 +41,16 @@ public class DeregisterRequest implements Event {
 		}
 		
 		return bytes;
+	}
+
+	public String getIpAddress()
+	{
+		return msgNodeIpAddress;
+	}
+	
+	public int getPort()
+	{
+		return msgNodePort;
 	}
 
 }

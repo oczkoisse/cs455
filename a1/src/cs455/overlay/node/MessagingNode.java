@@ -16,7 +16,7 @@ public class MessagingNode implements Node {
 	
 	private MessagingNodeListener messagingNodeListener;
 	
-	private boolean connectToRegistry()
+	public boolean connectToRegistry()
 	{
 		boolean success = false;
 		try
@@ -34,25 +34,18 @@ public class MessagingNode implements Node {
 		return success;
 	}
 	
-	public void register()
+	public void sendEventRegisterRequest() throws IOException
 	{
-		if (connectToRegistry())
-		{
-			System.out.println("Connected to registry");
-			try
-			{
-				RegisterRequest ev = new RegisterRequest(registryConnection.getLocalAddress().getHostAddress(), registryConnection.getLocalPort());
-				registrySender.send(ev.getBytes());
-				System.out.println("Sending register request");
-			}
-			catch (IOException e)
-			{
-				System.out.println(e.getMessage());
-				System.exit(0);
-			}
-		}
-		else
-			System.out.println("Can't connect to registry");
+		RegisterRequest ev = new RegisterRequest(registryConnection.getLocalAddress().getHostAddress(), registryConnection.getLocalPort());
+		registrySender.send(ev.getBytes());
+		System.out.println("Sending register request");
+	}
+	
+	private void sendEventDeregisterRequest() throws IOException
+	{
+		DeregisterRequest ev = new DeregisterRequest(registryConnection.getLocalAddress().getHostAddress(), registryConnection.getLocalPort());
+		registrySender.send(ev.getBytes());
+		System.out.println("Sending deregister request");
 	}
 	
 	@Override
@@ -97,9 +90,28 @@ public class MessagingNode implements Node {
 			// Initialize this messaging node
 			MessagingNode m = new MessagingNode(registryIp, registryPort);
 			
-			m.register();
+			if (m.connectToRegistry())
+			{
+				System.out.println("Connected to registry");
+				try
+				{
+					m.sendEventRegisterRequest();
+					
+				}
+				catch(IOException e)
+				{
+					System.out.println(e.getMessage());
+					System.exit(0);
+				}
+			}
+			else
+			{
+				System.out.println("Unable to connect to registry");
+				System.exit(0);
+				
+			}
 			
-			//m.new MessagingNodeInterpreter().run();
+			m.new MessagingNodeInterpreter().run();
 			
 			//Dead code follows
 			
@@ -204,7 +216,21 @@ public class MessagingNode implements Node {
 		
 		private boolean handleExitOverlay(String[] words)
 		{
-			return handleSingleWordCommands(words);
+			boolean isValid = handleSingleWordCommands(words);
+			
+			if (isValid)
+			{
+				try
+				{
+					sendEventDeregisterRequest();
+				}
+				catch(IOException e)
+				{
+					System.out.println(e.getMessage());
+				}
+			}
+			
+			return isValid;
 		}
 		
 		public boolean handleCommand(String cmd)
