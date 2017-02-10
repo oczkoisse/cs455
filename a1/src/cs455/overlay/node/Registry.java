@@ -208,7 +208,7 @@ public class Registry implements Node {
 			}
 			
 			if (!isValid)
-				System.out.println("Usage: " + words[0].trim());
+				System.out.println("Usage: " + words[0]);
 			
 			return isValid;
 		}
@@ -285,22 +285,22 @@ public class Registry implements Node {
 			
 			if (words.length > 0 && words[0].length() > 0)
 			{
-				switch(words[0].trim())
+				switch(words[0])
 				{
 				case "list-messaging-nodes":
-					isValid = this.handleListMessagingNodes(words);
+					isValid = handleListMessagingNodes(words);
 					break;
 				case "list-weights":
-					isValid = this.handleListWeights(words);
+					isValid = handleListWeights(words);
 					break;
 				case "setup-overlay":
-					isValid = this.handleSetupOverlay(words);
+					isValid = handleSetupOverlay(words);
 					break;
 				case "send-overlay-link-weights":
-					isValid = this.handleSendOverlayLinkWeights(words);
+					isValid = handleSendOverlayLinkWeights(words);
 					break;
 				case "start":
-					isValid = this.handleStart(words);
+					isValid = handleStart(words);
 					break;
 				default: 
 					System.out.println("Unknown command: " + words[0]);
