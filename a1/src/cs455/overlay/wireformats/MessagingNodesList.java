@@ -1,32 +1,26 @@
 package cs455.overlay.wireformats;
 
 import java.io.*;
+import java.util.*;
+import java.net.*;
 
 public class MessagingNodesList implements Event {
 	
-	int count;
-	String[] ipAddresses;
-	int[] ports;
+	Vector<InetSocketAddress> addresses;
 
-	public MessagingNodesList(int count, String[] ipAddresses, int[] ports)
+	public MessagingNodesList()
 	{
-		if (count >= 0)
-		{
-			this.count = count;
-			if (ipAddresses.length == ports.length)
-			{
-				this.ipAddresses = ipAddresses;
-				this.ports = ports;
-			}
-			else
-			{
-				throw new IllegalArgumentException("Incompatible lengths of list of IP addresses and ports");
-			}
-		}
-		else
-		{
-			throw  new IllegalArgumentException("Negative length passed for constructing messaging list"); 
-		}
+		addresses = new Vector<InetSocketAddress>(10);
+	}
+	
+	public void add(String ipAddress, int port)
+	{
+		addresses.add(new InetSocketAddress(ipAddress, port));
+	}
+	
+	public Vector<InetSocketAddress> getAddresses()
+	{
+		return (Vector<InetSocketAddress>) addresses.clone();
 	}
 	
 	@Override
@@ -38,12 +32,12 @@ public class MessagingNodesList implements Event {
 			DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(bout)))
 		{
 			dout.writeInt(this.getType().ordinal());
-			dout.writeInt(this.count);
+			dout.writeInt(addresses.size());
 			
-			for(int i=0; i<count; i++)
+			for (InetSocketAddress a: addresses)
 			{
-				dout.writeUTF(ipAddresses[i]);
-				dout.writeInt(ports[i]);
+				dout.writeUTF(a.getHostString());
+				dout.writeInt(a.getPort());
 			}
 
 			dout.flush();

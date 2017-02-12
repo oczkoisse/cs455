@@ -6,14 +6,14 @@ import cs455.overlay.transport.*;
 
 import java.io.*;
 import java.net.*;
-import java.util.HashMap;
+import java.util.*;
 
 public class Registry implements Node {
 	
 	private static int portnum;
 	private static Registry instance;
 	
-	private HashMap<String, Socket> registeredNodes = new HashMap<String, Socket>();
+	private HashMap<Socket, InetSocketAddress> registeredNodes = new HashMap<Socket, InetSocketAddress>();
 	
 	private static RegistryListener registryListener;
 	
@@ -44,38 +44,38 @@ public class Registry implements Node {
 	public void onEvent(Event ev) {
 		switch(ev.getType())
 		{
-		case REGISTER_REQUEST:
+		case TRAFFIC_SUMMARY:
 			break;
-		case DEREGISTER_REQUEST: 
-			onEvent((DeregisterRequest) ev);
+		case TASK_COMPLETE:
 			break;
 		default:
+			System.out.println("Unindentified message format");
 			break;
 		}
 
 	}
 	
 	
-	private void handleRegistration(RegisterRequest ev, Socket s)
+	private void onEvent(RegisterRequest ev, Socket s)
 	{	
-		String key = ev.getIpAddress() + ":" + ev.getPort();
 		String msg = null;
 		boolean status = false;
 		synchronized(registeredNodes)
 		{
-			if(!registeredNodes.containsKey(key))
+			if(!registeredNodes.containsKey(s))
 			{
-				if(s.getInetAddress().getHostAddress().equals(ev.getIpAddress()) && s.getPort() == ev.getPort() )
+				if(s.getInetAddress().getHostAddress().equals(ev.getIpAddress()))
 				{
-					registeredNodes.put(key, s);
+					// Need to put only the connection info for the listener on each 
+					registeredNodes.put(s, new InetSocketAddress(ev.getIpAddress(), ev.getPort()));
 					msg = "Registration successfull. Currently connected node count is " + registeredNodes.size();
 					status = true;
 				}
 				else
 				{
 					msg = "Registration unsuccessfull because of IP address mismatch between " 
-						+ s.getInetAddress().getHostAddress() + ":" + s.getPort() + " and "
-						+ ev.getIpAddress() + ":" + ev.getPort();
+						+ s.getInetAddress().getHostAddress() + " and "
+						+ ev.getIpAddress();
 				}
 			}
 			else
@@ -83,7 +83,6 @@ public class Registry implements Node {
 				msg = "Registration unsuccessfull because node is already registered";
 			}
 		}
-		System.out.println(msg);
 		try
 		{
 			TCPSender t = new TCPSender(s);
@@ -97,25 +96,16 @@ public class Registry implements Node {
 		}
 	}
 	
-	
-	
-	private void setupOverlay(int numConnections)
+	private void onEvent(DeregisterRequest ev, Socket s)
 	{
-		
-	}
-	
-	private void onEvent(DeregisterRequest ev)
-	{
-		String key = ev.getIpAddress() + ":" + ev.getPort();
 		String msg = null;
 		synchronized(registeredNodes)
 		{
-			if(registeredNodes.containsKey(key))
+			if(registeredNodes.containsKey(s))
 			{
-				Socket s = registeredNodes.get(key);
 				if(s.getInetAddress().getHostAddress().equals(ev.getIpAddress()) && s.getPort() == ev.getPort() )
 				{
-					registeredNodes.remove(key);
+					registeredNodes.remove(s);
 					msg = "Deregistration successfull. Currently connected node count is " + registeredNodes.size();
 				}
 				else
@@ -128,7 +118,69 @@ public class Registry implements Node {
 				msg = "Deregistration unsuccessfull since node is not even registered";
 			}
 		}
-		System.out.println(msg);
+	}
+	
+	private void setupOverlay(int numCons)
+	{
+		// Don't let any registration to proceed while setting up overlay
+		synchronized(registeredNodes)
+		{
+			int nodeCount = registeredNodes.size();
+			// All False array
+			boolean[][] overlay = new boolean[nodeCount][nodeCount];
+			
+			// Neighborhood for each node
+			int nbrd = numCons / 2;
+			
+			for (int i = 1; i <= nbrd; i++)
+			{
+				for (int j = 0; j < nodeCount; j++)
+				{
+					int p = (j + i) % nodeCount;
+					// Modulus operator can return a negative answer in Java
+					// so need to be careful
+					int q = (j - i) % nodeCount;
+					if (q < 0)
+						q += nodeCount;
+					
+					overlay[j][p] = overlay[p][j] = true;
+					overlay[j][q] = overlay[q][j] = true;
+					
+					if (numCons % 2 != 0 && nodeCount % 2 == 0)
+					{
+						int r = (j + (nodeCount / 2)) % nodeCount;
+						overlay[j][r] = overlay[r][j] = true;
+					}
+				}
+			}
+			
+			ArrayList<Socket> msgNodes = new ArrayList<Socket>(registeredNodes.keySet());
+			// Now use the overlay matrix to send link info to nodes
+			for (int i=0; i < nodeCount; i++)
+			{	
+				MessagingNodesList ml = new MessagingNodesList();
+				// Tell message node i
+				TCPSender t = new TCPSender(msgNodes.get(i));
+				for (int j = i+1; j < nodeCount; j++)
+				{
+					if(overlay[i][j])
+					{
+						// to connect to these message nodes
+						ml.add(registeredNodes.get(msgNodes.get(j)).getHostString(), registeredNodes.get(msgNodes.get(j)).getPort());
+					}
+				}
+				
+				try
+				{
+					t.send(ml.getBytes());
+				}
+				catch(IOException e)
+				{
+					System.out.println("Can't send bytes");
+				}
+				
+			}
+		}
 	}
 	
 	
@@ -195,15 +247,19 @@ public class Registry implements Node {
 				{
 				case REGISTER_REQUEST:
 					ev = readEventRegisterRequest();
-					handleRegistration((RegisterRequest) ev, super.sock);
+					onEvent((RegisterRequest) ev, super.sock);
 					break;
 				case DEREGISTER_REQUEST:
 					ev = readEventDeregisterRequest();
-					Registry.getInstance().onEvent(ev);
+					onEvent((DeregisterRequest) ev, super.sock);
 					break;
 				case TRAFFIC_SUMMARY:
+					//ev = readEventTrafficSummary();
+					//onEvent((TrafficSummary) ev);
+					break;
 				case TASK_COMPLETE:
-					System.out.println("Event unimplemented");
+					//ev = readEventTaskComplete();
+					//onEvent((TaskComplete) ev);
 					break;
 				default:
 					System.out.println("Unknown event encountered by registry");
@@ -242,7 +298,20 @@ public class Registry implements Node {
 		
 		private boolean handleListMessagingNodes(String[] words)
 		{
-			return handleSingleWordCommands(words);
+			boolean isValid = handleSingleWordCommands(words);
+			
+			if (isValid)
+			{	
+				synchronized(registeredNodes)
+				{
+					for(Socket s: registeredNodes.keySet())	
+					{
+						System.out.println(s.toString());
+					}
+				}
+			}
+			
+			return isValid;
 		}
 		
 		private boolean handleListWeights(String[] words)
@@ -259,7 +328,14 @@ public class Registry implements Node {
 				try
 				{
 					int numCon = Integer.parseInt(words[1]);
-					setupOverlay(numCon);
+					synchronized(registeredNodes)
+					{
+						if (numCon < 1 || numCon >= registeredNodes.size())
+							isValid = false;
+					}
+					
+					if (isValid)
+						setupOverlay(numCon);
 					
 				}
 				catch(NumberFormatException e)
@@ -268,7 +344,7 @@ public class Registry implements Node {
 				}
 			}
 			else 
-				return false;
+				isValid = false;
 			
 			if (!isValid)
 				System.out.println("Usage: setup-overlay <number-of-connected-nodes>");
@@ -281,6 +357,7 @@ public class Registry implements Node {
 			boolean isValid = handleSingleWordCommands(words);
 			if (isValid)
 			{
+				
 				
 			}
 			return isValid;

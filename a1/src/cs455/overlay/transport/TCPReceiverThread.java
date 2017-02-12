@@ -31,13 +31,20 @@ public abstract class TCPReceiverThread implements Runnable {
 		return EventType.valuesArr [ ordinalEvent ];
 	}
 	
+	public void close() throws IOException
+	{
+		sock.close();
+	}
+	
 	public void run()
 	{
+		//System.out.println("Handling " + this.sock.getInetAddress().getHostAddress() + ":" + this.sock.getPort());
 		try
 		{
 			while (true)
 			{
 				EventType evType = readEventType();
+				System.out.println("Received event " + evType.toString());
 				handleEvent(evType);
 			}
 		}

@@ -6,6 +6,7 @@ import cs455.overlay.transport.*;
 
 import java.io.*;
 import java.net.*;
+import java.util.*;
 
 public class MessagingNode implements Node {
 
@@ -13,8 +14,10 @@ public class MessagingNode implements Node {
 	private int registryPort;
 	private Socket registryConnection;
 	private TCPSender registrySender;
+	private HashMap<String, Socket> connections = new HashMap<String, Socket>();
 	
 	private MessagingNodeListener messagingNodeListener;
+	private MessagingNodeReceiver registryConnectionReceiver;
 	
 	public boolean connectToRegistry()
 	{
@@ -22,30 +25,39 @@ public class MessagingNode implements Node {
 		try
 		{
 			registryConnection = new Socket(registryIp, registryPort);
-			registrySender = new TCPSender(registryConnection);
 			success = true;
 		}
 		catch(IOException e)
 		{
-			System.out.println(e.getMessage());
+			System.out.println("Can't connect to Registry. Exiting...");
 			System.exit(0);
 		}
 		
+		registrySender = new TCPSender(registryConnection);
+		registryConnectionReceiver = new MessagingNodeReceiver(registryConnection);
+		new Thread(registryConnectionReceiver).start();
 		return success;
 	}
 	
 	public void sendEventRegisterRequest() throws IOException
 	{
-		RegisterRequest ev = new RegisterRequest(registryConnection.getLocalAddress().getHostAddress(), registryConnection.getLocalPort());
+		RegisterRequest ev = new RegisterRequest(registryConnection.getLocalAddress().getHostAddress(), messagingNodeListener.getLocalPort());
 		registrySender.send(ev.getBytes());
 		System.out.println("Sending register request");
 	}
 	
 	private void sendEventDeregisterRequest() throws IOException
 	{
-		DeregisterRequest ev = new DeregisterRequest(registryConnection.getLocalAddress().getHostAddress(), registryConnection.getLocalPort());
+		DeregisterRequest ev = new DeregisterRequest(registryConnection.getLocalAddress().getHostAddress(), messagingNodeListener.getLocalPort());
 		registrySender.send(ev.getBytes());
 		System.out.println("Sending deregister request");
+	}
+	
+	private void exit() throws IOException
+	{
+		for(Socket s : connections.values())
+			s.close();
+		messagingNodeListener.close();
 	}
 	
 	@Override
@@ -57,6 +69,8 @@ public class MessagingNode implements Node {
 			System.out.println(((RegisterResponse) ev).getInfo());
 			break;
 		case MESSAGING_NODES_LIST:
+			System.out.println("Got messaging nodes list");
+			onEvent((MessagingNodesList) ev);
 			break;
 		case LINK_WEIGHTS:
 			break;
@@ -66,6 +80,24 @@ public class MessagingNode implements Node {
 			break;
 		default:
 			break;
+		}
+	}
+	
+	private void onEvent(MessagingNodesList ev)
+	{
+		Vector<InetSocketAddress> addresses = ev.getAddresses();
+		for(InetSocketAddress a: addresses)
+		{
+			try
+			{
+				Socket s = new Socket(a.getHostString(), a.getPort());
+				connections.put(s.getInetAddress().getHostAddress() + ":" + s.getPort(), s);
+				System.out.println("Connected successfully to " + a.getHostString() + ":" + a.getPort());
+			}
+			catch(IOException e)
+			{
+				System.out.println("Can't connect to " + a.getHostString() + ":" + a.getPort());
+			}
 		}
 	}
 	
@@ -128,6 +160,7 @@ public class MessagingNode implements Node {
 		public MessagingNodeListener()
 		{
 			super();
+			System.out.println("Listening at " + super.sock.getInetAddress().getHostAddress() + ":" + super.sock.getLocalPort());
 		}
 		
 		public void handleClient(Socket s)
@@ -147,10 +180,25 @@ public class MessagingNode implements Node {
 		
 		private Event readEventRegisterResponse() throws IOException
 		{
-			boolean status = super.din.readByte() == 1 ? true : false;
-			String additionalInfo = super.din.readUTF();
+			boolean status = din.readByte() == 1 ? true : false;
+			String additionalInfo = din.readUTF();
 			
 			return new RegisterResponse(status, additionalInfo);
+		}
+		
+		private Event readEventMessagingNodesList() throws IOException
+		{
+			int count = din.readInt();
+			MessagingNodesList ev = new MessagingNodesList();
+			
+			for(int i = 0; i < count; i++)
+			{
+				String ip = din.readUTF();
+				int port = din.readInt();
+				ev.add(ip, port);
+			}
+			
+			return ev;
 		}
 		
 		public void handleEvent(EventType evType)
@@ -164,6 +212,7 @@ public class MessagingNode implements Node {
 					ev = readEventRegisterResponse();
 					break;
 				case MESSAGING_NODES_LIST:
+					ev = readEventMessagingNodesList();
 					break;
 				case LINK_WEIGHTS:
 					break;
@@ -223,6 +272,7 @@ public class MessagingNode implements Node {
 				try
 				{
 					sendEventDeregisterRequest();
+					exit();
 				}
 				catch(IOException e)
 				{

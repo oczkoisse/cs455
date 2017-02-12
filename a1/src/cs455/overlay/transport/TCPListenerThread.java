@@ -26,6 +26,21 @@ public abstract class TCPListenerThread implements Runnable {
 	
 	public abstract void handleClient(Socket s);
 	
+	public void close() throws IOException
+	{
+		sock.close();
+	}
+	
+	public int getLocalPort()
+	{
+		return sock.getLocalPort();
+	}
+	
+	public String getLocalIpAddress()
+	{
+		return sock.getInetAddress().getHostAddress();
+	}
+	
 	public void run()
 	{
 		while (true)
@@ -33,6 +48,7 @@ public abstract class TCPListenerThread implements Runnable {
 			try
 			{
 				Socket s = sock.accept();
+				System.out.println("Accepted " + s.getInetAddress().getHostAddress() + ":" + s.getPort());
 				handleClient(s);
 			}
 			catch(IOException e)
