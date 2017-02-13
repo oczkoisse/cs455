@@ -4,9 +4,9 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 
-public class MessagingNodesList implements Event {
+public class MessagingNodesList implements Event, Iterable<InetSocketAddress> {
 	
-	Vector<InetSocketAddress> addresses;
+	private Vector<InetSocketAddress> addresses;
 
 	public MessagingNodesList()
 	{
@@ -18,9 +18,14 @@ public class MessagingNodesList implements Event {
 		addresses.add(new InetSocketAddress(ipAddress, port));
 	}
 	
-	public Vector<InetSocketAddress> getAddresses()
+	public Iterator<InetSocketAddress> iterator()
 	{
-		return (Vector<InetSocketAddress>) addresses.clone();
+		return addresses.iterator();
+	}
+	
+	public int size()
+	{
+		return addresses.size();
 	}
 	
 	@Override
@@ -32,7 +37,7 @@ public class MessagingNodesList implements Event {
 			DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(bout)))
 		{
 			dout.writeInt(this.getType().ordinal());
-			dout.writeInt(addresses.size());
+			dout.writeInt(this.size());
 			
 			for (InetSocketAddress a: addresses)
 			{

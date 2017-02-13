@@ -60,15 +60,14 @@ public abstract class TCPReceiverThread implements Runnable {
 
 		try
 		{
+			System.out.println("Closing the connection");
 			din.close();
 			sock.close();
 		}
 		catch (IOException e)
 		{
-			System.out.println("Unable to close streams");
-			System.exit(0);
+			System.out.println("Unable to close the connection");
 		}
-		
 	}
 
 }

@@ -103,7 +103,7 @@ public class Registry implements Node {
 		{
 			if(registeredNodes.containsKey(s))
 			{
-				if(s.getInetAddress().getHostAddress().equals(ev.getIpAddress()) && s.getPort() == ev.getPort() )
+				if(s.getInetAddress().getHostAddress().equals(ev.getIpAddress()))
 				{
 					registeredNodes.remove(s);
 					msg = "Deregistration successfull. Currently connected node count is " + registeredNodes.size();
@@ -118,6 +118,7 @@ public class Registry implements Node {
 				msg = "Deregistration unsuccessfull since node is not even registered";
 			}
 		}
+		System.out.println(msg);
 	}
 	
 	private void setupOverlay(int numCons)
@@ -262,7 +263,7 @@ public class Registry implements Node {
 					//onEvent((TaskComplete) ev);
 					break;
 				default:
-					System.out.println("Unknown event encountered by registry");
+					System.out.println("Unknown message format received by registry");
 					System.exit(0);
 				}
 			}

@@ -57,6 +57,7 @@ public class MessagingNode implements Node {
 	{
 		for(Socket s : connections.values())
 			s.close();
+		registryConnectionReceiver.close();
 		messagingNodeListener.close();
 	}
 	
@@ -72,8 +73,9 @@ public class MessagingNode implements Node {
 			System.out.println("Got messaging nodes list");
 			onEvent((MessagingNodesList) ev);
 			break;
-		case LINK_WEIGHTS:
-			break;
+		case LINK_WEIGHTS_LIST:
+			System.out.println("Got link weights");
+			onEvent((LinkWeightsList) ev);
 		case TASK_INITIATE:
 			break;
 		case PULL_TRAFFIC_SUMMARY:
@@ -83,10 +85,14 @@ public class MessagingNode implements Node {
 		}
 	}
 	
+	private void onEvent(LinkWeightsList ev)
+	{
+		
+	}
+	
 	private void onEvent(MessagingNodesList ev)
 	{
-		Vector<InetSocketAddress> addresses = ev.getAddresses();
-		for(InetSocketAddress a: addresses)
+		for(InetSocketAddress a: ev)
 		{
 			try
 			{
@@ -201,6 +207,32 @@ public class MessagingNode implements Node {
 			return ev;
 		}
 		
+		private LinkWeightsList.LinkInfo readLinkInfo(LinkWeightsList l) throws IOException
+		{
+			String ipAddressA = din.readUTF();
+			int portnumA = din.readInt();
+			String ipAddressB = din.readUTF();
+			int portnumB = din.readInt();
+			int weight = din.readInt();
+			
+			LinkWeightsList.LinkInfo linfo = l.new LinkInfo(ipAddressA, portnumA, ipAddressB, portnumB, weight);
+			
+			return linfo;
+		}
+		
+		private Event readEventLinkWeightsList() throws IOException
+		{
+			LinkWeightsList ev = new LinkWeightsList();
+			
+			int count = din.readInt();
+			for (int i=0; i<count; i++)
+			{
+				ev.add(readLinkInfo(ev));
+			}
+			
+			return ev;
+		}
+		
 		public void handleEvent(EventType evType)
 		{
 			Event ev = null;
@@ -214,7 +246,8 @@ public class MessagingNode implements Node {
 				case MESSAGING_NODES_LIST:
 					ev = readEventMessagingNodesList();
 					break;
-				case LINK_WEIGHTS:
+				case LINK_WEIGHTS_LIST:
+					ev = readEventLinkWeightsList();
 					break;
 				case TASK_INITIATE:
 					break;

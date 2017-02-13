@@ -1,14 +1,12 @@
 package cs455.overlay.wireformats;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.util.*;
 
-public class LinkWeights implements Event 
+public class LinkWeightsList implements Event, Iterable<LinkWeightsList.LinkInfo>
 {
 
-	LinkWeights.LinkInfo[] links;
+	private Vector<LinkInfo> links;
 	
 	@Override
 	public byte[] getBytes() throws IOException 
@@ -19,7 +17,7 @@ public class LinkWeights implements Event
 				DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(bout)))
 			{
 				dout.writeInt(this.getType().ordinal());
-				dout.writeInt(this.links.length);
+				dout.writeInt(this.size());
 				
 				for(LinkInfo l: this.links)
 				{
@@ -33,16 +31,26 @@ public class LinkWeights implements Event
 			
 		return bytes;
 	}
+	
+	public int size()
+	{
+		return links.size();
+	}
 
 	@Override
 	public EventType getType() 
 	{	
-		return EventType.LINK_WEIGHTS;
+		return EventType.LINK_WEIGHTS_LIST;
 	}
 	
-	public LinkWeights(LinkWeights.LinkInfo[] links)
+	public LinkWeightsList()
 	{
-		this.links = links;
+		this.links = new Vector<LinkInfo>(20);
+	}
+	
+	public void add(LinkInfo linfo)
+	{
+		this.links.add(linfo);
 	}
 	
 	public class LinkInfo
@@ -66,7 +74,7 @@ public class LinkWeights implements Event
 			this.weight = weight;
 		}
 		
-		public byte[] getBytes() throws IOException
+		private byte[] getBytes() throws IOException
 		{
 			byte[] bytes = null;
 			
@@ -89,6 +97,12 @@ public class LinkWeights implements Event
 			return bytes;
 		}
 		
+	}
+
+	@Override
+	public Iterator<LinkInfo> iterator() {
+		
+		return links.iterator();
 	}
 
 }
