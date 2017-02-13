@@ -2,7 +2,9 @@ package cs455.overlay.node;
 
 import cs455.overlay.util.*;
 import cs455.overlay.wireformats.*;
+import cs455.overlay.wireformats.LinkWeightsList.LinkInfo;
 import cs455.overlay.transport.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 import java.io.*;
 import java.net.*;
@@ -16,6 +18,9 @@ public class Registry implements Node {
 	private HashMap<Socket, InetSocketAddress> registeredNodes = new HashMap<Socket, InetSocketAddress>();
 	
 	private static RegistryListener registryListener;
+	
+	private Overlay ov;
+	
 	
 	private Registry(int portnum)
 	{
@@ -126,60 +131,42 @@ public class Registry implements Node {
 		// Don't let any registration to proceed while setting up overlay
 		synchronized(registeredNodes)
 		{
-			int nodeCount = registeredNodes.size();
-			// All False array
-			boolean[][] overlay = new boolean[nodeCount][nodeCount];
-			
-			// Neighborhood for each node
-			int nbrd = numCons / 2;
-			
-			for (int i = 1; i <= nbrd; i++)
-			{
-				for (int j = 0; j < nodeCount; j++)
-				{
-					int p = (j + i) % nodeCount;
-					// Modulus operator can return a negative answer in Java
-					// so need to be careful
-					int q = (j - i) % nodeCount;
-					if (q < 0)
-						q += nodeCount;
-					
-					overlay[j][p] = overlay[p][j] = true;
-					overlay[j][q] = overlay[q][j] = true;
-					
-					if (numCons % 2 != 0 && nodeCount % 2 == 0)
-					{
-						int r = (j + (nodeCount / 2)) % nodeCount;
-						overlay[j][r] = overlay[r][j] = true;
-					}
-				}
+			this.ov = new Overlay(numCons);
+			for (Map.Entry<Socket, MessagingNodesList> entry : ov.getMessagingNodesList().entrySet()) {
+			    Socket s = entry.getKey();
+			    MessagingNodesList m = entry.getValue();
+			    
+			    try
+			    {
+			    	TCPSender t = new TCPSender(s);
+				    t.send(m.getBytes());
+			    }
+			    catch(IOException e)
+			    {
+			    	System.out.println("Unable to send messaging nodes list to " + s.toString());
+			    }
+			    
 			}
-			
-			ArrayList<Socket> msgNodes = new ArrayList<Socket>(registeredNodes.keySet());
-			// Now use the overlay matrix to send link info to nodes
-			for (int i=0; i < nodeCount; i++)
-			{	
-				MessagingNodesList ml = new MessagingNodesList();
-				// Tell message node i
-				TCPSender t = new TCPSender(msgNodes.get(i));
-				for (int j = i+1; j < nodeCount; j++)
-				{
-					if(overlay[i][j])
-					{
-						// to connect to these message nodes
-						ml.add(registeredNodes.get(msgNodes.get(j)).getHostString(), registeredNodes.get(msgNodes.get(j)).getPort());
-					}
-				}
-				
+		}
+	}
+	
+	
+	private void sendLinkWeights()
+	{
+		LinkWeightsList l = ov.getLinkWeightsList();
+		synchronized(registeredNodes)
+		{
+			for(Socket s: registeredNodes.keySet())
+			{
 				try
 				{
-					t.send(ml.getBytes());
+					TCPSender t = new TCPSender(s);
+					t.send(l.getBytes());
 				}
 				catch(IOException e)
 				{
-					System.out.println("Can't send bytes");
+					System.out.println("Unable to send link weights list " + s.toString());
 				}
-				
 			}
 		}
 	}
@@ -358,8 +345,7 @@ public class Registry implements Node {
 			boolean isValid = handleSingleWordCommands(words);
 			if (isValid)
 			{
-				
-				
+				sendLinkWeights();
 			}
 			return isValid;
 		}
@@ -423,5 +409,114 @@ public class Registry implements Node {
 			
 			return isValid;
 		}
+	}
+	
+	private class Overlay
+	{
+		private int degree;
+		private int nodeCount;
+		private ArrayList<Socket> addresses;
+		
+		private int[][] overlay;
+		
+		public Overlay(int degree)
+		{
+			this.degree = degree;
+			// Coupling with Registry
+			synchronized(registeredNodes)
+			{
+				this.addresses = new ArrayList<Socket>(registeredNodes.keySet());
+				this.nodeCount = this.addresses.size();
+			}
+			constructOverlay();
+		}
+		
+		// Constructs overlay and link weights
+		private void constructOverlay()
+		{
+			// All 0 array
+			overlay = new int[nodeCount][nodeCount];
+			
+			// Neighborhood for each node
+			int nbrd = degree / 2;
+			
+			for (int i = 1; i <= nbrd; i++)
+			{
+				for (int j = 0; j < nodeCount; j++)
+				{
+					int p = (j + i) % nodeCount;
+					// Modulus operator can return a negative answer in Java
+					// so need to be careful
+					int q = (j - i) % nodeCount;
+					if (q < 0)
+						q += nodeCount;
+					
+					// A random weight between 1 and 10 (both inclusive)
+					int weight = ThreadLocalRandom.current().nextInt(1, 11);
+					overlay[j][p] = overlay[p][j] = weight;
+					
+					weight = ThreadLocalRandom.current().nextInt(1, 11);
+					overlay[j][q] = overlay[q][j] = weight;
+					
+					if (degree % 2 != 0 && nodeCount % 2 == 0)
+					{
+						int r = (j + (nodeCount / 2)) % nodeCount;
+						weight = ThreadLocalRandom.current().nextInt(1, 11);
+						overlay[j][r] = overlay[r][j] = weight;
+					}
+				}
+			
+			}
+		}
+		
+		
+		// Return MessagingNodesList indexed by Socket for which it is meant to be sent
+		public HashMap<Socket, MessagingNodesList> getMessagingNodesList()
+		{
+			HashMap<Socket, MessagingNodesList> hl = new HashMap<Socket, MessagingNodesList>();
+			synchronized(registeredNodes)
+			{
+				for(int i=0; i<nodeCount; i++)
+				{
+					MessagingNodesList l = new MessagingNodesList();
+					for (int j=i+1; j<nodeCount; j++)
+					{
+						if (overlay[i][j] > 0)
+						{
+							l.add(registeredNodes.get(addresses.get(j)).getHostString(), registeredNodes.get(addresses.get(j)).getPort());
+						}
+					}
+					hl.put(addresses.get(i), l);
+				}
+			}
+			return hl;
+		}
+		
+		// Return the LinkWeightsList to be sent to all nodes
+		public LinkWeightsList getLinkWeightsList()
+		{
+			LinkWeightsList l = new LinkWeightsList();
+			
+			synchronized(registeredNodes)
+			{
+				for(int i=0; i<nodeCount; i++)
+				{
+					for (int j=i+1; j<nodeCount; j++)
+					{
+						if (overlay[i][j] > 0)
+						{
+							l.add(l.new LinkInfo(new InetSocketAddress(addresses.get(i).getInetAddress().getHostAddress(), // ip address of i
+										  							   addresses.get(i).getPort()), // port at which i is listening
+												 new InetSocketAddress(registeredNodes.get(addresses.get(j)).getHostString(), // ip address of j
+													   				   registeredNodes.get(addresses.get(j)).getPort()), // port at which j is listening
+												 overlay[i][j]));
+						}
+					}
+				}
+			}
+			
+			return l;
+		}
+		
 	}
 }

@@ -1,6 +1,7 @@
 package cs455.overlay.wireformats;
 
 import java.io.*;
+import java.net.*;
 import java.util.*;
 
 public class LinkWeightsList implements Event, Iterable<LinkWeightsList.LinkInfo>
@@ -63,13 +64,13 @@ public class LinkWeightsList implements Event, Iterable<LinkWeightsList.LinkInfo
 		
 		private int weight;
 		
-		public LinkInfo(String ipAddressA, int portnumA, String ipAddressB, int portnumB, int weight)
+		public LinkInfo(InetSocketAddress addA, InetSocketAddress addB, int weight)
 		{
-			this.ipAddressA = ipAddressA;
-			this.portnumA = portnumA;
+			this.ipAddressA = addA.getHostString();
+			this.portnumA = addA.getPort();
 			
-			this.ipAddressB = ipAddressB;
-			this.portnumB = portnumB;
+			this.ipAddressB = addB.getHostString();
+			this.portnumB = addB.getPort();
 			
 			this.weight = weight;
 		}

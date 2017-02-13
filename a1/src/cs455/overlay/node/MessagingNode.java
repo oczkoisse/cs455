@@ -70,11 +70,9 @@ public class MessagingNode implements Node {
 			System.out.println(((RegisterResponse) ev).getInfo());
 			break;
 		case MESSAGING_NODES_LIST:
-			System.out.println("Got messaging nodes list");
 			onEvent((MessagingNodesList) ev);
 			break;
 		case LINK_WEIGHTS_LIST:
-			System.out.println("Got link weights");
 			onEvent((LinkWeightsList) ev);
 		case TASK_INITIATE:
 			break;
@@ -87,7 +85,7 @@ public class MessagingNode implements Node {
 	
 	private void onEvent(LinkWeightsList ev)
 	{
-		
+		System.out.println("Link weights are received and processed. Ready to send messages");
 	}
 	
 	private void onEvent(MessagingNodesList ev)
@@ -103,8 +101,10 @@ public class MessagingNode implements Node {
 			catch(IOException e)
 			{
 				System.out.println("Can't connect to " + a.getHostString() + ":" + a.getPort());
+				return;
 			}
 		}
+		System.out.println("All connections are established. Number of connections: " + ev.size());
 	}
 	
 	public MessagingNode(String registryIp, int registryPort)
@@ -215,7 +215,7 @@ public class MessagingNode implements Node {
 			int portnumB = din.readInt();
 			int weight = din.readInt();
 			
-			LinkWeightsList.LinkInfo linfo = l.new LinkInfo(ipAddressA, portnumA, ipAddressB, portnumB, weight);
+			LinkWeightsList.LinkInfo linfo = l.new LinkInfo(new InetSocketAddress(ipAddressA, portnumA), new InetSocketAddress(ipAddressB, portnumB), weight);
 			
 			return linfo;
 		}
