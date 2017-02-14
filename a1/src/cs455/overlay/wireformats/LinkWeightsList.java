@@ -54,6 +54,12 @@ public class LinkWeightsList implements Event, Iterable<LinkWeightsList.LinkInfo
 		this.links.add(linfo);
 	}
 	
+	@Override
+	public Iterator<LinkInfo> iterator() {
+		
+		return links.iterator();
+	}
+	
 	public class LinkInfo
 	{
 		private String ipAddressA;
@@ -73,6 +79,21 @@ public class LinkWeightsList implements Event, Iterable<LinkWeightsList.LinkInfo
 			this.portnumB = addB.getPort();
 			
 			this.weight = weight;
+		}
+		
+		public InetSocketAddress getAddressA()
+		{
+			return new InetSocketAddress(ipAddressA, portnumA);
+		}
+		
+		public InetSocketAddress getAddressB()
+		{
+			return new InetSocketAddress(ipAddressB, portnumB);
+		}
+		
+		public int getWeight()
+		{
+			return weight;
 		}
 		
 		private byte[] getBytes() throws IOException
@@ -98,12 +119,6 @@ public class LinkWeightsList implements Event, Iterable<LinkWeightsList.LinkInfo
 			return bytes;
 		}
 		
-	}
-
-	@Override
-	public Iterator<LinkInfo> iterator() {
-		
-		return links.iterator();
 	}
 
 }

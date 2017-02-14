@@ -32,6 +32,11 @@ public class TaskInitiate implements Event {
 		
 		return bytes;
 	}
+	
+	public int getRounds()
+	{
+		return rounds;
+	}
 
 	@Override
 	public EventType getType() {

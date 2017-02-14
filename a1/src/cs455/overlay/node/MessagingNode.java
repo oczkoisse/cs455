@@ -7,6 +7,7 @@ import cs455.overlay.transport.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class MessagingNode implements Node {
 
@@ -14,10 +15,25 @@ public class MessagingNode implements Node {
 	private int registryPort;
 	private Socket registryConnection;
 	private TCPSender registrySender;
+	
+	// Keep track of addresses of messaging nodes' listening addresses and socket connections to them
+	// These sockets may be because of initiating or accepting connections
 	private HashMap<String, Socket> connections = new HashMap<String, Socket>();
+	
+	// Messaging nodes listening addresses matched with sockets connected to neighboring nodes
+	// that would result in the shortest path
+	private HashMap<String, Socket> routingEntries = new HashMap<String, Socket>();
+	private ArrayList<String> overlayNodes = new ArrayList<String>();
 	
 	private MessagingNodeListener messagingNodeListener;
 	private MessagingNodeReceiver registryConnectionReceiver;
+	
+	private int receiveTracker = 0;
+	private int sendTracker = 0;
+	private int relayTracker = 0;
+	
+	private long sendSummation = 0;
+	private long receiveSummation = 0;
 	
 	public boolean connectToRegistry()
 	{
@@ -53,7 +69,7 @@ public class MessagingNode implements Node {
 		System.out.println("Sending deregister request");
 	}
 	
-	private void exit() throws IOException
+	private synchronized void exit() throws IOException
 	{
 		for(Socket s : connections.values())
 			s.close();
@@ -74,7 +90,12 @@ public class MessagingNode implements Node {
 			break;
 		case LINK_WEIGHTS_LIST:
 			onEvent((LinkWeightsList) ev);
+			break;
 		case TASK_INITIATE:
+			onEvent((TaskInitiate) ev);
+			break;
+		case MESSAGE:
+			onEvent((Message) ev);
 			break;
 		case PULL_TRAFFIC_SUMMARY:
 			break;
@@ -83,8 +104,216 @@ public class MessagingNode implements Node {
 		}
 	}
 	
+	private void onEvent(Message ev)
+	{
+		String destination = ev.getDestination();
+		String ownAddress = registryConnection.getInetAddress().getHostAddress() + ":" + messagingNodeListener.getLocalPort();
+		if (destination == ownAddress)
+		{
+			receiveSummation += ev.getPayload();
+			receiveTracker++;
+			return;
+		}
+		else
+		{
+			try
+			{
+				TCPSender t = new TCPSender(routingEntries.get(destination));
+				t.send(ev.getBytes());
+				relayTracker++;
+			}
+			catch(IOException e)
+			{
+				System.out.println(e.getMessage());
+				System.exit(0);
+			}
+			
+		}
+	}
+	
+	private void onEvent(TaskInitiate ev)
+	{
+		int numRounds = ev.getRounds();
+		
+		int numMsgPerRound = 5;
+		
+		for(int i=0; i<numRounds; i++)
+		{
+			// Choose a random sink node from the entire overlay except itself
+			// RoutingEntries is guaranteed to have every other node except itself
+			int randomKey = ThreadLocalRandom.current().nextInt(0, routingEntries.size());
+			Socket s = routingEntries.get(overlayNodes.get(randomKey));
+			
+			for (int j=0; j<numMsgPerRound; j++)
+			{
+				int payload = ThreadLocalRandom.current().nextInt();
+				// Send to sink node
+				try
+				{
+					TCPSender t = new TCPSender(s);
+					t.send(new Message(new InetSocketAddress(s.getInetAddress().getHostAddress(), s.getPort()), payload).getBytes());
+					sendSummation += payload;
+				}
+				catch(IOException e)
+				{
+					System.out.println(e.getMessage());
+					System.exit(0);
+				}
+			}
+		}
+	}
+	
+	private void populateRoutingEntries(LinkWeightsList ev)
+	{ 
+		HashMap<String, Integer> mapHostNameToInt = new HashMap<String, Integer>();
+		Vector<String> mapIntToHostName = new Vector<String>();
+		
+		int nodeCount = 0;
+		// Extract listening addresses of all messaging nodes
+		for(LinkWeightsList.LinkInfo l : ev)
+		{
+			String k1 = l.getAddressA().getHostString() + ":" + l.getAddressA().getPort();
+
+			//System.out.println(k1);
+			if(!mapHostNameToInt.containsKey(k1))
+			{
+				//System.out.println("done");
+				mapHostNameToInt.put(k1, nodeCount++);
+				mapIntToHostName.add(k1);
+			}
+			
+			String k2 = l.getAddressB().getHostString() + ":" + l.getAddressB().getPort();
+
+			//System.out.println(k2);
+			if(!mapHostNameToInt.containsKey(k2))
+			{
+				//System.out.println("done");
+				mapHostNameToInt.put(k2, nodeCount++);
+				mapIntToHostName.add(k2);
+			}
+		}
+		
+		//System.out.println(mapHostNameToInt.size());
+		
+		final int infinity = Integer.MAX_VALUE;
+		int[][] graph = new int[nodeCount][nodeCount];
+		for (int[] row: graph)
+		{
+			Arrays.fill(row, infinity);
+		}
+		
+		for(LinkWeightsList.LinkInfo l : ev)
+		{
+			String k1 = l.getAddressA().getHostString() + ":" + l.getAddressA().getPort();
+			String k2 = l.getAddressB().getHostString() + ":" + l.getAddressB().getPort();
+
+			int i = mapHostNameToInt.get(k1);
+			int j = mapHostNameToInt.get(k2);
+			
+			graph[i][j] = l.getWeight();
+			
+		}
+		
+		// So now our graph consists of only infinity values and weights in case there is a link
+		
+		// Distances to infinity
+		Integer distance[] = new Integer[nodeCount];
+		
+		// Previous to Undefined
+		int prev[] = new int[nodeCount];
+		HashSet<Integer> vertices = new HashSet<Integer>();
+		
+		final int undefined = -1;
+		for(int i=0; i<nodeCount; i++)
+		{
+			prev[i] = undefined;
+			distance[i] = infinity;
+			vertices.add(i);
+		}
+		
+		int source = mapHostNameToInt.get(registryConnection.getLocalAddress().getHostAddress() + ":" + messagingNodeListener.getLocalPort());
+		
+		distance[source] = 0;
+		boolean visited[] = new boolean[nodeCount];
+		
+		while(vertices.size() > 0)
+		{
+			// Pick up the node with minimum distance
+			// will be source node at start
+			
+			int minDistance=infinity;
+			int u=0;
+			for(int t=0; t<nodeCount; t++)
+			{
+				if(!visited[t] && distance[t] < minDistance)
+				{
+					minDistance = distance[t];
+					u = t;
+				}
+			}
+			
+			vertices.remove(u);
+			visited[u] = true;
+			
+			// For all nodes in the graph
+			for(int v=0; v<nodeCount; v++)
+			{
+				// If it is a neighbor
+				if (graph[u][v] != infinity)
+				{
+					
+					int altDistance = distance[u] + graph[u][v];
+					if (altDistance < distance[v])
+					{
+						distance[v] = altDistance;
+						prev[v] = u;
+					}
+				}
+			}
+		}
+		
+		for (int i = 0; i<nodeCount; i++)
+		{
+			int j = prev[i];
+			while(j != undefined)
+			{
+				if (prev[j] == undefined)
+					break;
+				j = prev[j];
+			}
+			if (j != undefined)
+			{
+				synchronized(connections)
+				{
+					// a packet sent to i should be sent to j by this messaging node	
+					routingEntries.put(mapIntToHostName.get(i), connections.get(mapIntToHostName.get(j)));
+				}
+					overlayNodes.add(mapIntToHostName.get(i));
+			}
+		}
+		
+		for(Map.Entry<String,Socket> s : routingEntries.entrySet())
+		{
+			if (s.getValue() == null)
+				System.out.println(s.getKey() + "----");
+			else
+				System.out.println(s.getKey() + "----" + s.getValue().getInetAddress().getHostAddress() + ":" + s.getValue().getPort());
+		}
+		System.out.println("----");
+		synchronized(connections) {
+		for(Map.Entry<String,Socket> s : connections.entrySet())
+		{
+			if (s.getValue() == null)
+				System.out.println(s.getKey() + "----");
+			else
+				System.out.println(s.getKey() + "----" + s.getValue().getInetAddress().getHostAddress() + ":" + s.getValue().getPort());
+		}
+		}
+	}
+	
 	private void onEvent(LinkWeightsList ev)
 	{
+		populateRoutingEntries(ev);	
 		System.out.println("Link weights are received and processed. Ready to send messages");
 	}
 	
@@ -95,7 +324,10 @@ public class MessagingNode implements Node {
 			try
 			{
 				Socket s = new Socket(a.getHostString(), a.getPort());
-				connections.put(s.getInetAddress().getHostAddress() + ":" + s.getPort(), s);
+				synchronized(connections)
+				{
+					connections.put(a.getHostString() + ":" + a.getPort(), s);
+				}
 				System.out.println("Connected successfully to " + a.getHostString() + ":" + a.getPort());
 			}
 			catch(IOException e)
@@ -171,6 +403,12 @@ public class MessagingNode implements Node {
 		
 		public void handleClient(Socket s)
 		{
+			// Add the received connection to send messages later
+			synchronized(connections)
+			{
+				connections.put(registryConnection.getInetAddress().getHostAddress() + ":" + super.sock.getLocalPort(), s);
+			}
+			
 			Thread t = new Thread(new MessagingNodeReceiver(s));
 			t.setName("Messaging node " + super.sock.toString());
 			t.start();
@@ -233,6 +471,21 @@ public class MessagingNode implements Node {
 			return ev;
 		}
 		
+		private Event readEventTaskInitiate() throws IOException
+		{
+			int numRounds = din.readInt();
+			return new TaskInitiate(numRounds);
+		}
+		
+		private Event readEventMessage() throws IOException
+		{
+			String ipAddress = din.readUTF();
+			int port = din.readInt();
+			InetSocketAddress a = new InetSocketAddress(ipAddress, port);
+			int payload = din.readInt();
+			return new Message(a, payload);
+		}
+		
 		public void handleEvent(EventType evType)
 		{
 			Event ev = null;
@@ -250,9 +503,14 @@ public class MessagingNode implements Node {
 					ev = readEventLinkWeightsList();
 					break;
 				case TASK_INITIATE:
+					ev = readEventTaskInitiate();
+					break;
+				case MESSAGE:
+					ev = readEventMessage();
 					break;
 				case PULL_TRAFFIC_SUMMARY:
 					break;
+					
 				default:
 					System.out.println("Unknown event encountered");
 					break;

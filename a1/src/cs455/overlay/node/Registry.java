@@ -2,7 +2,6 @@ package cs455.overlay.node;
 
 import cs455.overlay.util.*;
 import cs455.overlay.wireformats.*;
-import cs455.overlay.wireformats.LinkWeightsList.LinkInfo;
 import cs455.overlay.transport.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -39,11 +38,11 @@ public class Registry implements Node {
 		}
 	}
 	
-	
 	public static Registry getInstance()
 	{
-			return instance;
+		return instance;
 	}
+
 	
 	@Override
 	public void onEvent(Event ev) {
@@ -100,6 +99,7 @@ public class Registry implements Node {
 			System.exit(0);
 		}
 	}
+	
 	
 	private void onEvent(DeregisterRequest ev, Socket s)
 	{
@@ -167,6 +167,22 @@ public class Registry implements Node {
 				{
 					System.out.println("Unable to send link weights list " + s.toString());
 				}
+			}
+		}
+	}
+	
+	private void start(int numRounds)
+	{
+		for(Socket s: registeredNodes.keySet())
+		{
+			TCPSender t = new TCPSender(s);
+			try
+			{
+				t.send(new TaskInitiate(numRounds).getBytes());
+			}
+			catch(IOException e)
+			{
+				System.out.println(e.getMessage());
 			}
 		}
 	}
@@ -304,7 +320,12 @@ public class Registry implements Node {
 		
 		private boolean handleListWeights(String[] words)
 		{
-			return handleSingleWordCommands(words);
+			boolean isValid = handleSingleWordCommands(words);
+			if(isValid)
+			{
+				
+			}
+			return isValid;
 		}
 		
 		private boolean handleSetupOverlay(String[] words)
@@ -358,7 +379,9 @@ public class Registry implements Node {
 			{
 				try{
 					int numRounds = Integer.parseInt(words[1]);
-					// Registry should take over from here
+					
+					start(numRounds);
+					
 				}
 				catch(NumberFormatException e)
 				{
@@ -388,11 +411,11 @@ public class Registry implements Node {
 				case "list-messaging-nodes":
 					isValid = handleListMessagingNodes(words);
 					break;
-				case "list-weights":
-					isValid = handleListWeights(words);
-					break;
 				case "setup-overlay":
 					isValid = handleSetupOverlay(words);
+					break;
+				case "list-weights":
+					isValid = handleListWeights(words);
 					break;
 				case "send-overlay-link-weights":
 					isValid = handleSendOverlayLinkWeights(words);
@@ -415,6 +438,8 @@ public class Registry implements Node {
 	{
 		private int degree;
 		private int nodeCount;
+		// The sockets to which registry is connected to
+		// Allows to be indexed by integers, and in a fixed order
 		private ArrayList<Socket> addresses;
 		
 		private int[][] overlay;
@@ -481,8 +506,10 @@ public class Registry implements Node {
 					MessagingNodesList l = new MessagingNodesList();
 					for (int j=i+1; j<nodeCount; j++)
 					{
+						// If node j is a neighbor of node i
 						if (overlay[i][j] > 0)
 						{
+							// Encapsulate the listening addresses of neighbor messaging nodes
 							l.add(registeredNodes.get(addresses.get(j)).getHostString(), registeredNodes.get(addresses.get(j)).getPort());
 						}
 					}
@@ -505,14 +532,19 @@ public class Registry implements Node {
 					{
 						if (overlay[i][j] > 0)
 						{
-							l.add(l.new LinkInfo(new InetSocketAddress(addresses.get(i).getInetAddress().getHostAddress(), // ip address of i
-										  							   addresses.get(i).getPort()), // port at which i is listening
+							l.add(l.new LinkInfo(new InetSocketAddress(registeredNodes.get(addresses.get(i)).getHostString(), // ip address of i
+																	   registeredNodes.get(addresses.get(i)).getPort()), // port at which i is listening
 												 new InetSocketAddress(registeredNodes.get(addresses.get(j)).getHostString(), // ip address of j
 													   				   registeredNodes.get(addresses.get(j)).getPort()), // port at which j is listening
 												 overlay[i][j]));
 						}
 					}
 				}
+			}
+			
+			for(LinkWeightsList.LinkInfo li: l)
+			{
+				System.out.println(li.getAddressA().toString() + "<-->" + li.getAddressB().toString() + " " + li.getWeight());
 			}
 			
 			return l;
