@@ -16,7 +16,7 @@ public class MessagingNode implements Node {
 	private Socket registryConnection;
 	private TCPSender registrySender;
 	
-	// Keep track of addresses of messaging nodes' listening addresses and socket connections to them
+	// Keep track of connected messaging nodes' listening addresses and socket connections to them
 	// These sockets may be because of initiating or accepting connections
 	private HashMap<String, Socket> connections = new HashMap<String, Socket>();
 	
@@ -104,11 +104,39 @@ public class MessagingNode implements Node {
 		}
 	}
 	
+	private void onEvent(PeerConnect ev, Socket s)
+	{
+		String ipAddress = ev.getIpAddress();
+		int port = ev.getPort();
+		
+		if (ipAddress.equals(s.getInetAddress().getHostAddress()))
+		{
+			synchronized(connections)
+			{
+				connections.put(ipAddress + ":" + port, s);
+			}
+			new Thread(new MessagingNodeReceiver(s)).start();
+		}
+		else
+		{
+			System.out.println("Bad peer connection");
+			try
+			{
+				s.close();
+			}
+			catch(IOException e)
+			{
+				System.out.println(e.getMessage());
+			}
+		}
+		
+	}
+	
 	private void onEvent(Message ev)
 	{
 		String destination = ev.getDestination();
 		String ownAddress = registryConnection.getInetAddress().getHostAddress() + ":" + messagingNodeListener.getLocalPort();
-		if (destination == ownAddress)
+		if (destination.equals(ownAddress))
 		{
 			receiveSummation += ev.getPayload();
 			receiveTracker++;
@@ -193,7 +221,7 @@ public class MessagingNode implements Node {
 			}
 		}
 		
-		//System.out.println(mapHostNameToInt.size());
+		System.out.println(mapHostNameToInt.size());
 		
 		final int infinity = Integer.MAX_VALUE;
 		int[][] graph = new int[nodeCount][nodeCount];
@@ -324,10 +352,17 @@ public class MessagingNode implements Node {
 			try
 			{
 				Socket s = new Socket(a.getHostString(), a.getPort());
+				TCPSender t = new TCPSender(s);
+				t.send(new PeerConnect(registryConnection.getLocalAddress().getHostAddress(), messagingNodeListener.getLocalPort()).getBytes());
 				synchronized(connections)
 				{
+					// Store the socket for sending data
 					connections.put(a.getHostString() + ":" + a.getPort(), s);
 				}
+				
+				// Start a thread for listening on this socket
+				new Thread(new MessagingNodeReceiver(s)).start();
+				
 				System.out.println("Connected successfully to " + a.getHostString() + ":" + a.getPort());
 			}
 			catch(IOException e)
@@ -404,11 +439,6 @@ public class MessagingNode implements Node {
 		public void handleClient(Socket s)
 		{
 			// Add the received connection to send messages later
-			synchronized(connections)
-			{
-				connections.put(registryConnection.getInetAddress().getHostAddress() + ":" + super.sock.getLocalPort(), s);
-			}
-			
 			Thread t = new Thread(new MessagingNodeReceiver(s));
 			t.setName("Messaging node " + super.sock.toString());
 			t.start();
@@ -486,6 +516,15 @@ public class MessagingNode implements Node {
 			return new Message(a, payload);
 		}
 		
+		private Event readEventPeerConnect() throws IOException
+		{
+			String ipAddress = din.readUTF();
+			int port = din.readInt();
+			
+			return new PeerConnect(ipAddress, port);
+			
+		}
+		
 		public void handleEvent(EventType evType)
 		{
 			Event ev = null;
@@ -495,20 +534,30 @@ public class MessagingNode implements Node {
 				{
 				case REGISTER_RESPONSE:
 					ev = readEventRegisterResponse();
+					onEvent(ev);
 					break;
 				case MESSAGING_NODES_LIST:
 					ev = readEventMessagingNodesList();
+					onEvent(ev);
 					break;
 				case LINK_WEIGHTS_LIST:
 					ev = readEventLinkWeightsList();
+					onEvent(ev);
 					break;
 				case TASK_INITIATE:
 					ev = readEventTaskInitiate();
+					onEvent(ev);
+					break;
+				case PEER_CONNECT:
+					ev = readEventPeerConnect();
+					onEvent((PeerConnect)ev, super.sock);
 					break;
 				case MESSAGE:
 					ev = readEventMessage();
+					onEvent(ev);
 					break;
 				case PULL_TRAFFIC_SUMMARY:
+					onEvent(ev);
 					break;
 					
 				default:
@@ -521,9 +570,6 @@ public class MessagingNode implements Node {
 				System.out.println("Can't read event: " + e.getMessage());
 				System.exit(0);
 			}
-			
-			if (ev != null)
-				onEvent(ev);
 		}
 	}
 

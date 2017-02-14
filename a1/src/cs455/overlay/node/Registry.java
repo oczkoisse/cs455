@@ -259,11 +259,11 @@ public class Registry implements Node {
 					break;
 				case TRAFFIC_SUMMARY:
 					//ev = readEventTrafficSummary();
-					//onEvent((TrafficSummary) ev);
+					//onEvent(ev);
 					break;
 				case TASK_COMPLETE:
 					//ev = readEventTaskComplete();
-					//onEvent((TaskComplete) ev);
+					//onEvent(ev);
 					break;
 				default:
 					System.out.println("Unknown message format received by registry");
@@ -438,9 +438,10 @@ public class Registry implements Node {
 	{
 		private int degree;
 		private int nodeCount;
+		
 		// The sockets to which registry is connected to
 		// Allows to be indexed by integers, and in a fixed order
-		private ArrayList<Socket> addresses;
+		private final ArrayList<Socket> addresses;
 		
 		private int[][] overlay;
 		
