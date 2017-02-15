@@ -221,7 +221,16 @@ public class Registry implements Node {
 			summaryNotReceived = new HashSet<InetSocketAddress>(registeredNodes.values());
 			trafficSummaries = new HashMap<InetSocketAddress, TrafficSummary>();
 			
-			this.ov = new Overlay(numCons);
+			try
+			{
+				this.ov = new Overlay(numCons);
+			}
+			catch(IllegalArgumentException e)
+			{
+				System.out.println(e.getMessage());
+				this.ov = null;
+				return;
+			}
 			for (Map.Entry<Socket, MessagingNodesList> entry : ov.getMessagingNodesList().entrySet()) {
 			    Socket s = entry.getKey();
 			    MessagingNodesList m = entry.getValue();
@@ -451,11 +460,15 @@ public class Registry implements Node {
 			{
 				try
 				{
-					int numCon = Integer.parseInt(words[1]);
-					synchronized(registeredNodes)
+					int numCon;
+					try
 					{
-						if (numCon < 1 || numCon >= registeredNodes.size())
-							isValid = false;
+						numCon = Integer.parseInt(words[1]);
+					}
+					catch(NumberFormatException e)
+					{
+						isValid = false;
+						return isValid;
 					}
 					
 					if (isValid)
@@ -580,6 +593,11 @@ public class Registry implements Node {
 			
 			// Neighborhood for each node
 			int nbrd = degree / 2;
+			
+
+			if ((degree < 1 || degree >= nodeCount) || (nodeCount % 2 != 0 && degree % 2 != 0))
+				throw new IllegalArgumentException("No overlay possible for current parameters: " + nodeCount + "," + degree);
+			
 			
 			for (int i = 1; i <= nbrd; i++)
 			{
