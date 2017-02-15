@@ -206,8 +206,9 @@ public class MessagingNode implements Node {
 			if(!mapHostNameToInt.containsKey(k1))
 			{
 				//System.out.println("done");
-				mapHostNameToInt.put(k1, nodeCount++);
+				mapHostNameToInt.put(k1, nodeCount);
 				mapIntToHostName.add(k1);
+				nodeCount++;
 			}
 			
 			String k2 = l.getAddressB().getHostString() + ":" + l.getAddressB().getPort();
@@ -216,8 +217,9 @@ public class MessagingNode implements Node {
 			if(!mapHostNameToInt.containsKey(k2))
 			{
 				//System.out.println("done");
-				mapHostNameToInt.put(k2, nodeCount++);
+				mapHostNameToInt.put(k2, nodeCount);
 				mapIntToHostName.add(k2);
+				nodeCount++;
 			}
 		}
 		
@@ -238,7 +240,7 @@ public class MessagingNode implements Node {
 			int i = mapHostNameToInt.get(k1);
 			int j = mapHostNameToInt.get(k2);
 			
-			graph[i][j] = l.getWeight();
+			graph[i][j] = graph[j][i] = l.getWeight();
 			
 		}
 		
@@ -262,7 +264,6 @@ public class MessagingNode implements Node {
 		int source = mapHostNameToInt.get(registryConnection.getLocalAddress().getHostAddress() + ":" + messagingNodeListener.getLocalPort());
 		
 		distance[source] = 0;
-		boolean visited[] = new boolean[nodeCount];
 		
 		while(vertices.size() > 0)
 		{
@@ -273,7 +274,7 @@ public class MessagingNode implements Node {
 			int u=0;
 			for(int t=0; t<nodeCount; t++)
 			{
-				if(!visited[t] && distance[t] < minDistance)
+				if(vertices.contains(t) && distance[t] < minDistance)
 				{
 					minDistance = distance[t];
 					u = t;
@@ -281,7 +282,6 @@ public class MessagingNode implements Node {
 			}
 			
 			vertices.remove(u);
-			visited[u] = true;
 			
 			// For all nodes in the graph
 			for(int v=0; v<nodeCount; v++)
@@ -300,26 +300,30 @@ public class MessagingNode implements Node {
 			}
 		}
 		
+		//System.out.println(mapHostNameToInt.toString());
+		//System.out.println(mapIntToHostName.toString());
+		
+		//System.out.println(Arrays.toString(distance));
+		//System.out.println(Arrays.toString(prev));
+		
+		
 		for (int i = 0; i<nodeCount; i++)
 		{
-			int j = prev[i];
-			while(j != undefined)
+			int j = i;
+			if (prev[j] != undefined)
 			{
-				if (prev[j] == undefined)
-					break;
-				j = prev[j];
-			}
-			if (j != undefined)
-			{
+				while(prev[j] != source)
+					j = prev[j];
 				synchronized(connections)
 				{
 					// a packet sent to i should be sent to j by this messaging node	
 					routingEntries.put(mapIntToHostName.get(i), connections.get(mapIntToHostName.get(j)));
 				}
-					overlayNodes.add(mapIntToHostName.get(i));
-			}
+				overlayNodes.add(mapIntToHostName.get(i));
+			}	
 		}
 		
+		/**
 		for(Map.Entry<String,Socket> s : routingEntries.entrySet())
 		{
 			if (s.getValue() == null)
@@ -337,6 +341,7 @@ public class MessagingNode implements Node {
 				System.out.println(s.getKey() + "----" + s.getValue().getInetAddress().getHostAddress() + ":" + s.getValue().getPort());
 		}
 		}
+		*/
 	}
 	
 	private void onEvent(LinkWeightsList ev)
