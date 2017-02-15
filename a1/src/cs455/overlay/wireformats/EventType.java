@@ -13,7 +13,8 @@ public enum EventType {
 	PEER_CONNECT,
 	TASK_COMPLETE,
 	PULL_TRAFFIC_SUMMARY,
-	TRAFFIC_SUMMARY;
+	TRAFFIC_SUMMARY,
+	DEREGISTER_RESPONSE;
 	
 	// Cache to allow efficient access by ordinal number
 	public static final EventType[] valuesArr = EventType.values();

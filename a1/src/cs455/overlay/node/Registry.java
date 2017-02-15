@@ -189,6 +189,7 @@ public class Registry implements Node {
 	private void onEvent(DeregisterRequest ev, Socket s)
 	{
 		String msg = null;
+		boolean status = false;
 		synchronized(registeredNodes)
 		{
 			if(registeredNodes.containsKey(s))
@@ -197,6 +198,7 @@ public class Registry implements Node {
 				{
 					registeredNodes.remove(s);
 					msg = "Deregistration successfull. Currently connected node count is " + registeredNodes.size();
+					status = true;
 				}
 				else
 				{
@@ -208,7 +210,17 @@ public class Registry implements Node {
 				msg = "Deregistration unsuccessfull since node is not even registered";
 			}
 		}
-		System.out.println(msg);
+		try
+		{
+			TCPSender t = new TCPSender(s);
+			DeregisterResponse evr = new DeregisterResponse(status, msg);
+			t.send(evr.getBytes());
+		}
+		catch(IOException e)
+		{
+			System.out.println(e.getMessage());
+			System.exit(0);
+		}
 	}
 	
 	private void setupOverlay(int numCons)
