@@ -27,6 +27,9 @@ public class MessagingNode implements Node {
 	private HashMap<String, Socket> routingEntries = new HashMap<String, Socket>();
 	private ArrayList<String> overlayNodes = new ArrayList<String>();
 	
+	// Rebuilt every time populateRoutingEntries() is called
+	private HashMap<String, String> shortestPaths;
+			
 	private MessagingNodeListener messagingNodeListener;
 	private MessagingNodeReceiver registryConnectionReceiver;
 	
@@ -36,9 +39,7 @@ public class MessagingNode implements Node {
 	
 	private AtomicLong sendSummation = new AtomicLong(0);
 	private AtomicLong receiveSummation = new AtomicLong(0);
-	
-	int[] prev;
-	
+
 	public boolean connectToRegistry()
 	{
 		boolean success = false;
@@ -295,7 +296,7 @@ public class MessagingNode implements Node {
 		Integer distance[] = new Integer[nodeCount];
 		
 		// Previous to Undefined
-		prev = new int[nodeCount];
+		int[] prev = new int[nodeCount];
 		HashSet<Integer> vertices = new HashSet<Integer>();
 		
 		final int undefined = -1;
@@ -368,6 +369,22 @@ public class MessagingNode implements Node {
 			}	
 		}
 		
+		// Rebuild it every time
+		shortestPaths = new HashMap<String, String>();
+		for(int i=0; i<nodeCount; i++)
+		{
+			// Build shortest path if destination is i from source
+			int j = i;
+			String path = mapIntToHostName.get(j);
+			while(prev[j] != undefined)
+			{
+				path += " --- " + graph[j][prev[j]] + " --- " + mapIntToHostName.get(prev[j]);
+				j = prev[j];
+			}
+			// Destination is the key
+			shortestPaths.put(mapIntToHostName.get(i), path);
+		}
+		
 		/**
 		for(Map.Entry<String,Socket> s : routingEntries.entrySet())
 		{
@@ -392,19 +409,9 @@ public class MessagingNode implements Node {
 	
 	private void printShortestPath()
 	{
-		if(prev != null)
+		for (Map.Entry<String, String> entry : shortestPaths.entrySet())
 		{
-			for(int i=0; i<prev.length; i++)
-			{
-				int j = i;
-				System.out.print(j);
-				while(prev[j] != -1)
-				{
-					j = prev[j];
-					System.out.print(" <- " + j);
-				}
-				System.out.println();
-			}
+			System.out.println(entry.getKey() + "  :  "  + entry.getValue());
 		}
 	}
 	
