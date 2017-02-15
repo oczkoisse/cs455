@@ -109,7 +109,7 @@ public class MessagingNode implements Node {
 	
 	private void onEvent(PullTrafficSummary ev)
 	{
-		String ownIpAddress = registryConnection.getInetAddress().getHostAddress();
+		String ownIpAddress = registryConnection.getLocalAddress().getHostAddress();
 		int portnum = messagingNodeListener.getLocalPort();
 		TrafficSummary ts = new TrafficSummary(ownIpAddress, portnum, sendTracker.intValue(), sendSummation.longValue(), receiveTracker.intValue(), receiveSummation.longValue(), relayTracker.intValue());
 		
@@ -161,7 +161,7 @@ public class MessagingNode implements Node {
 	private void onEvent(Message ev)
 	{
 		String destination = ev.getDestination();
-		String ownAddress = registryConnection.getInetAddress().getHostAddress() + ":" + messagingNodeListener.getLocalPort();
+		String ownAddress = registryConnection.getLocalAddress().getHostAddress() + ":" + messagingNodeListener.getLocalPort();
 		if (destination.equals(ownAddress))
 		{
 			receiveSummation.addAndGet(ev.getPayload());
@@ -228,7 +228,7 @@ public class MessagingNode implements Node {
 		
 		try
 		{
-			registrySender.send(new TaskComplete(registryConnection.getInetAddress().getHostAddress(), messagingNodeListener.getLocalPort()).getBytes());
+			registrySender.send(new TaskComplete(registryConnection.getLocalAddress().getHostAddress(), messagingNodeListener.getLocalPort()).getBytes());
 		}
 		catch(IOException e)
 		{

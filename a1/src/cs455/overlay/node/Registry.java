@@ -68,59 +68,76 @@ public class Registry implements Node {
 	{
 		InetSocketAddress addr = ev.getAddress();
 		
-		if(summaryNotReceived.remove(addr))
-			trafficSummaries.put(addr, ev);
-		
-		if (summaryNotReceived.size() == 0)
+		synchronized(summaryNotReceived)
 		{
-			// Print combined summaries
-			final String space = "   ";
-			long sentCount = 0, receivedCount = 0, sentSummation = 0, receivedSummation = 0;
-			for(Map.Entry<InetSocketAddress, TrafficSummary> entry: trafficSummaries.entrySet())
+			synchronized(trafficSummaries)
 			{
-				InetSocketAddress a = entry.getKey();
-				TrafficSummary ts = entry.getValue();
-				System.out.println(a.toString() + space + ts.getSentCount() + space + ts.getReceivedCount() + space + ts.getSentSummation() + space + ts.getReceivedSummation() + space + ts.getRelayCount());
-				sentCount += ts.getSentCount();
-				receivedCount += ts.getReceivedCount();
-				sentSummation += ts.getSentSummation();
-				receivedSummation += ts.getReceivedSummation();
+				if(summaryNotReceived.remove(addr))
+					trafficSummaries.put(addr, ev);
+				
+				if (summaryNotReceived.size() == 0)
+				{
+					// Print combined summaries
+					final String space = "   ";
+					long sentCount = 0, receivedCount = 0, sentSummation = 0, receivedSummation = 0;
+					for(Map.Entry<InetSocketAddress, TrafficSummary> entry: trafficSummaries.entrySet())
+					{
+						InetSocketAddress a = entry.getKey();
+						TrafficSummary ts = entry.getValue();
+						System.out.println(a.toString() + space + ts.getSentCount() + space + ts.getReceivedCount() + space + ts.getSentSummation() + space + ts.getReceivedSummation() + space + ts.getRelayCount());
+						sentCount += ts.getSentCount();
+						receivedCount += ts.getReceivedCount();
+						sentSummation += ts.getSentSummation();
+						receivedSummation += ts.getReceivedSummation();
+					}
+					
+					System.out.println(space + space + space + sentCount + space + receivedCount + space + sentSummation + space + receivedSummation);
+				}
 			}
-			
-			System.out.println(space + space + space + sentCount + space + receivedCount + space + sentSummation + space + receivedSummation);
 		}
 	}
 	
 	private void onEvent(TaskComplete ev)
 	{
 		InetSocketAddress a = ev.getAddress();
-		taskCompleteNotReceived.remove(a);
 		
-		// Check if all TaskComplete messages have been received
-		if (taskCompleteNotReceived.size() == 0)
+		synchronized(taskCompleteNotReceived)
 		{
-			System.out.println("All task completion messages received");
-			try
+			System.out.println("Got the lock");
+			System.out.println(a.toString());
+			taskCompleteNotReceived.remove(a);
+			System.out.println(taskCompleteNotReceived.size());
+			System.out.println(taskCompleteNotReceived.toString());
+		
+			// Check if all TaskComplete messages have been received
+			if (taskCompleteNotReceived.size() == 0)
 			{
-				// If so, then wait for 20s
-				TimeUnit.SECONDS.sleep(20);
-			}
-			catch(InterruptedException e)
-			{
-				System.out.println(e.getMessage());
-			}
-			finally{
-				for(Socket s: registeredNodes.keySet())
+				System.out.println("All task completion messages received");
+				try
 				{
-					// Issue PULL_TRAFFIC_SUMMARY
-					TCPSender t = new TCPSender(s);
-					try
+					// If so, then wait for 20s
+					TimeUnit.SECONDS.sleep(20);
+				}
+				catch(InterruptedException e)
+				{
+					System.out.println(e.getMessage());
+				}
+				finally{
+					synchronized(registeredNodes)
 					{
-						t.send(new PullTrafficSummary().getBytes());
-					}
-					catch(IOException e)
-					{
-						System.out.println(e.getMessage());
+						for(Socket s: registeredNodes.keySet())
+						{
+							// Issue PULL_TRAFFIC_SUMMARY
+							TCPSender t = new TCPSender(s);
+							try
+							{
+								t.send(new PullTrafficSummary().getBytes());
+							}
+							catch(IOException e)
+							{
+								System.out.println(e.getMessage());
+							}
+						}
 					}
 				}
 			}
@@ -199,7 +216,7 @@ public class Registry implements Node {
 		// Don't let any registration to proceed while setting up overlay
 		synchronized(registeredNodes)
 		{
-			// First set up record for noting reception of TASK_COMPLETE
+			// First set up record for noting reception of TASK_COMPLETE		
 			taskCompleteNotReceived = new HashSet<InetSocketAddress>(registeredNodes.values());
 			summaryNotReceived = new HashSet<InetSocketAddress>(registeredNodes.values());
 			trafficSummaries = new HashMap<InetSocketAddress, TrafficSummary>();
@@ -222,6 +239,7 @@ public class Registry implements Node {
 			}
 		}
 	}
+	
 	
 	
 	private void sendLinkWeights()
