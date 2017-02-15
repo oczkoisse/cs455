@@ -74,10 +74,24 @@ public class MessagingNode implements Node {
 		//System.out.println("Sending deregister request");
 	}
 	
-	private synchronized void exit() throws IOException
+	private synchronized void exit()
 	{
-		for(Socket s : connections.values())
-			s.close();
+		try
+		{
+			for(Socket s : connections.values())
+				s.close();
+			
+			registryConnection.close();
+			messagingNodeListener.close();
+		}
+		catch(IOException e)
+		{
+			System.out.println(e.getMessage());
+		}
+		finally 
+		{
+			System.exit(0);
+		}
 	}
 	
 	@Override
@@ -87,6 +101,11 @@ public class MessagingNode implements Node {
 		{
 		case REGISTER_RESPONSE:
 			System.out.println(((RegisterResponse) ev).getInfo());
+			break;
+		case DEREGISTER_RESPONSE:
+			System.out.println(((DeregisterResponse) ev).getInfo());
+			if (((DeregisterResponse) ev).getStatus())
+				exit();
 			break;
 		case MESSAGING_NODES_LIST:
 			onEvent((MessagingNodesList) ev);
@@ -537,6 +556,14 @@ public class MessagingNode implements Node {
 			return new RegisterResponse(status, additionalInfo);
 		}
 		
+		private Event readEventDeregisterResponse() throws IOException
+		{
+			boolean status = din.readByte() == 1 ? true : false;
+			String additionalInfo = din.readUTF();
+			
+			return new DeregisterResponse(status, additionalInfo);
+		}
+		
 		private Event readEventMessagingNodesList() throws IOException
 		{
 			int count = din.readInt();
@@ -642,7 +669,10 @@ public class MessagingNode implements Node {
 					ev = readEventPullTrafficSummary();
 					onEvent(ev);
 					break;
-					
+				case DEREGISTER_RESPONSE:
+					ev = readEventDeregisterResponse();
+					onEvent(ev);
+					break;
 				default:
 					System.out.println("Unknown event encountered");
 					break;
@@ -697,7 +727,6 @@ public class MessagingNode implements Node {
 				try
 				{
 					sendEventDeregisterRequest();
-					exit();
 				}
 				catch(IOException e)
 				{
