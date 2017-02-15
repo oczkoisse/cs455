@@ -61,22 +61,20 @@ public class MessagingNode implements Node {
 	{
 		RegisterRequest ev = new RegisterRequest(registryConnection.getLocalAddress().getHostAddress(), messagingNodeListener.getLocalPort());
 		registrySender.send(ev.getBytes());
-		System.out.println("Sending register request");
+		//System.out.println("Sending register request");
 	}
 	
 	private void sendEventDeregisterRequest() throws IOException
 	{
 		DeregisterRequest ev = new DeregisterRequest(registryConnection.getLocalAddress().getHostAddress(), messagingNodeListener.getLocalPort());
 		registrySender.send(ev.getBytes());
-		System.out.println("Sending deregister request");
+		//System.out.println("Sending deregister request");
 	}
 	
 	private synchronized void exit() throws IOException
 	{
 		for(Socket s : connections.values())
 			s.close();
-		registryConnectionReceiver.close();
-		messagingNodeListener.close();
 	}
 	
 	@Override
@@ -694,7 +692,7 @@ public class MessagingNode implements Node {
 					isValid = handleExitOverlay(words);
 					break;
 				default: 
-					System.out.println("Unknown command: " + words[0]);
+					post("Unknown command: " + words[0]);
 					isValid = false;
 					break;
 				}

@@ -504,7 +504,7 @@ public class Registry implements Node {
 				}
 			}
 			else 
-				return false;
+				isValid = false;
 			
 			if (!isValid)
 				System.out.println("Usage: start <number-of-rounds>");
@@ -658,11 +658,12 @@ public class Registry implements Node {
 				}
 			}
 			
+			/**
 			for(LinkWeightsList.LinkInfo li: l)
 			{
 				System.out.println(li.getAddressA().toString() + "<-->" + li.getAddressB().toString() + " " + li.getWeight());
 			}
-			
+			*/
 			return l;
 		}
 		

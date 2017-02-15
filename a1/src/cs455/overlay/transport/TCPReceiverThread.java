@@ -44,7 +44,7 @@ public abstract class TCPReceiverThread implements Runnable {
 			while (true)
 			{
 				EventType evType = readEventType();
-				System.out.println("Received event " + evType.toString());
+				//System.out.println("Received event " + evType.toString());
 				handleEvent(evType);
 			}
 		}
@@ -52,7 +52,6 @@ public abstract class TCPReceiverThread implements Runnable {
 		{
 			System.out.println("Remote socket closed: " + sock.getRemoteSocketAddress().toString() );
 		}
-		
 		catch(IOException e)
 		{
 			System.out.println("Can't read event: " + e.getMessage());

@@ -23,6 +23,13 @@ public abstract class Interpreter
 			this.maxTries = maxTries;
 	}
 	
+	public void post(String msg)
+	{
+		System.out.println();
+		System.out.println(msg);
+		System.out.print(prompt);
+	}
+	
 	public void run()
 	{	
 		try(BufferedReader buf = new BufferedReader(new InputStreamReader(System.in)))

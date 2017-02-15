@@ -25,7 +25,7 @@ public class TCPSender {
 	{
 		dout.write(data);
 		dout.flush();
-		System.out.println(sock.getLocalAddress().getHostAddress() + ":" + sock.getLocalPort() + " wrote " + data.length + " bytes to " + sock.getInetAddress().getHostAddress() + ":" + sock.getPort());
+		//System.out.println(sock.getLocalAddress().getHostAddress() + ":" + sock.getLocalPort() + " wrote " + data.length + " bytes to " + sock.getInetAddress().getHostAddress() + ":" + sock.getPort());
 	}
 	
 	public Socket getSock()
