@@ -271,6 +271,30 @@ public class Registry implements Node {
 		}
 	}
 	
+	private void listWeights()
+	{
+		if (ov != null)
+		{
+			LinkWeightsList l = ov.getLinkWeightsList();
+			for(LinkWeightsList.LinkInfo li : l)
+			{
+				System.out.println(li.getAddressA().toString() + " -- " + li.getWeight() + " -- " + li.getAddressB().toString());
+			}
+		}
+		
+	}
+	
+	private void listMessagingNodes()
+	{
+		synchronized(registeredNodes)
+		{
+			for(InetSocketAddress a: registeredNodes.values())	
+			{
+				System.out.println(a.toString());
+			}
+		}
+	}
+	
 	private void start(int numRounds)
 	{
 		for(Socket s: registeredNodes.keySet())
@@ -430,13 +454,7 @@ public class Registry implements Node {
 			
 			if (isValid)
 			{	
-				synchronized(registeredNodes)
-				{
-					for(InetSocketAddress a: registeredNodes.values())	
-					{
-						System.out.println(a.toString());
-					}
-				}
+				listMessagingNodes();
 			}
 			
 			return isValid;
@@ -447,7 +465,7 @@ public class Registry implements Node {
 			boolean isValid = handleSingleWordCommands(words);
 			if(isValid)
 			{
-				
+				listWeights();
 			}
 			return isValid;
 		}
@@ -676,12 +694,6 @@ public class Registry implements Node {
 				}
 			}
 			
-			/**
-			for(LinkWeightsList.LinkInfo li: l)
-			{
-				System.out.println(li.getAddressA().toString() + "<-->" + li.getAddressB().toString() + " " + li.getWeight());
-			}
-			*/
 			return l;
 		}
 		
