@@ -115,7 +115,6 @@ public class MessagingNode implements Node {
 			{
 				connections.put(ipAddress + ":" + port, s);
 			}
-			new Thread(new MessagingNodeReceiver(s)).start();
 		}
 		else
 		{
@@ -155,7 +154,14 @@ public class MessagingNode implements Node {
 				System.out.println(e.getMessage());
 				System.exit(0);
 			}
-			
+			catch(Exception e)
+			{
+				System.out.println(e.getMessage());
+				System.out.println("Destination: " + destination);
+				System.out.println(routingEntries.toString());
+				System.out.println("Own address: " + ownAddress);
+				throw e;
+			}
 		}
 	}
 	
@@ -170,8 +176,10 @@ public class MessagingNode implements Node {
 			// Choose a random sink node from the entire overlay except itself
 			// RoutingEntries is guaranteed to have every other node except itself
 			int randomKey = ThreadLocalRandom.current().nextInt(0, routingEntries.size());
-			Socket s = routingEntries.get(overlayNodes.get(randomKey));
+			String destination = overlayNodes.get(randomKey);
+			Socket s = routingEntries.get(destination);
 			
+			String[] destinationParsed = destination.split(":");
 			for (int j=0; j<numMsgPerRound; j++)
 			{
 				int payload = ThreadLocalRandom.current().nextInt();
@@ -179,7 +187,7 @@ public class MessagingNode implements Node {
 				try
 				{
 					TCPSender t = new TCPSender(s);
-					t.send(new Message(new InetSocketAddress(s.getInetAddress().getHostAddress(), s.getPort()), payload).getBytes());
+					t.send(new Message(new InetSocketAddress(destinationParsed[0], Integer.parseInt(destinationParsed[1])), payload).getBytes());
 					sendSummation += payload;
 				}
 				catch(IOException e)
@@ -318,12 +326,12 @@ public class MessagingNode implements Node {
 				{
 					// a packet sent to i should be sent to j by this messaging node	
 					routingEntries.put(mapIntToHostName.get(i), connections.get(mapIntToHostName.get(j)));
+					overlayNodes.add(mapIntToHostName.get(i));
 				}
-				overlayNodes.add(mapIntToHostName.get(i));
 			}	
 		}
 		
-		/**
+		
 		for(Map.Entry<String,Socket> s : routingEntries.entrySet())
 		{
 			if (s.getValue() == null)
@@ -332,16 +340,17 @@ public class MessagingNode implements Node {
 				System.out.println(s.getKey() + "----" + s.getValue().getInetAddress().getHostAddress() + ":" + s.getValue().getPort());
 		}
 		System.out.println("----");
-		synchronized(connections) {
-		for(Map.Entry<String,Socket> s : connections.entrySet())
+		synchronized(connections)
 		{
-			if (s.getValue() == null)
-				System.out.println(s.getKey() + "----");
-			else
-				System.out.println(s.getKey() + "----" + s.getValue().getInetAddress().getHostAddress() + ":" + s.getValue().getPort());
+			for(Map.Entry<String,Socket> s : connections.entrySet())
+			{
+				if (s.getValue() == null)
+					System.out.println(s.getKey() + "----");
+				else
+					System.out.println(s.getKey() + "----" + s.getValue().getInetAddress().getHostAddress() + ":" + s.getValue().getPort());
+			}
 		}
-		}
-		*/
+		
 	}
 	
 	private void onEvent(LinkWeightsList ev)

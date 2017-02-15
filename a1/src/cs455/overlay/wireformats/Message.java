@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.*;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class Message implements Event {
 	
