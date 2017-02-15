@@ -85,14 +85,14 @@ public class Registry implements Node {
 						InetSocketAddress a = entry.getKey();
 						TrafficSummary ts = entry.getValue();
 						//System.out.println(a.toString() + space + ts.getSentCount() + space + ts.getReceivedCount() + space + ts.getSentSummation() + space + ts.getReceivedSummation() + space + ts.getRelayCount());
-						System.out.format("%15s %12d %12d %20d %20d %12d%n", a.toString(), ts.getSentCount(), ts.getReceivedCount(), ts.getSentSummation(), ts.getReceivedSummation(), ts.getRelayCount());
+						System.out.format("%20s %12d %12d %20d %20d %12d%n", a.toString(), ts.getSentCount(), ts.getReceivedCount(), ts.getSentSummation(), ts.getReceivedSummation(), ts.getRelayCount());
 						sentCount += ts.getSentCount();
 						receivedCount += ts.getReceivedCount();
 						sentSummation += ts.getSentSummation();
 						receivedSummation += ts.getReceivedSummation();
 					}
 					
-					System.out.format("%15s %12d %12d %20d %20d %12s%n", " ", sentCount, receivedCount, sentSummation, receivedSummation, " ");
+					System.out.format("%20s %12d %12d %20d %20d %12s%n", " ", sentCount, receivedCount, sentSummation, receivedSummation, " ");
 				}
 			}
 		}

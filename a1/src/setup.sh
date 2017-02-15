@@ -1,6 +1,6 @@
 #!/bin/sh
 
-test_home=$HOME/Documents/Assignments/cs455/HW1-PC/cs455/a1
+test_home=$HOME/Documents/Assignments/cs455/HW1-PC/cs455/a1/src
 
 for i in `cat $test_home/machine_list`
 do
