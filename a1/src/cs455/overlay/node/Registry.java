@@ -253,19 +253,22 @@ public class Registry implements Node {
 	
 	private void sendLinkWeights()
 	{
-		LinkWeightsList l = ov.getLinkWeightsList();
-		synchronized(registeredNodes)
+		if (ov != null)
 		{
-			for(Socket s: registeredNodes.keySet())
+			LinkWeightsList l = ov.getLinkWeightsList();
+			synchronized(registeredNodes)
 			{
-				try
+				for(Socket s: registeredNodes.keySet())
 				{
-					TCPSender t = new TCPSender(s);
-					t.send(l.getBytes());
-				}
-				catch(IOException e)
-				{
-					System.out.println("Unable to send link weights list " + s.toString());
+					try
+					{
+						TCPSender t = new TCPSender(s);
+						t.send(l.getBytes());
+					}
+					catch(IOException e)
+					{
+						System.out.println("Unable to send link weights list " + s.toString());
+					}
 				}
 			}
 		}
@@ -676,19 +679,22 @@ public class Registry implements Node {
 		{
 			LinkWeightsList l = new LinkWeightsList();
 			
-			synchronized(registeredNodes)
+			if (registeredNodes != null)
 			{
-				for(int i=0; i<nodeCount; i++)
+				synchronized(registeredNodes)
 				{
-					for (int j=i+1; j<nodeCount; j++)
+					for(int i=0; i<nodeCount; i++)
 					{
-						if (overlay[i][j] > 0)
+						for (int j=i+1; j<nodeCount; j++)
 						{
-							l.add(l.new LinkInfo(new InetSocketAddress(registeredNodes.get(addresses.get(i)).getHostString(), // ip address of i
-																	   registeredNodes.get(addresses.get(i)).getPort()), // port at which i is listening
-												 new InetSocketAddress(registeredNodes.get(addresses.get(j)).getHostString(), // ip address of j
-													   				   registeredNodes.get(addresses.get(j)).getPort()), // port at which j is listening
-												 overlay[i][j]));
+							if (overlay[i][j] > 0)
+							{
+								l.add(l.new LinkInfo(new InetSocketAddress(registeredNodes.get(addresses.get(i)).getHostString(), // ip address of i
+																		   registeredNodes.get(addresses.get(i)).getPort()), // port at which i is listening
+													 new InetSocketAddress(registeredNodes.get(addresses.get(j)).getHostString(), // ip address of j
+														   				   registeredNodes.get(addresses.get(j)).getPort()), // port at which j is listening
+													 overlay[i][j]));
+							}
 						}
 					}
 				}
