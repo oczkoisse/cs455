@@ -1,5 +1,6 @@
 package cs455.overlay.node;
 
+
 import cs455.overlay.util.Interpreter;
 import cs455.overlay.wireformats.*;
 import cs455.overlay.transport.*;
@@ -8,6 +9,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.*;
 
 public class MessagingNode implements Node {
 
@@ -28,12 +30,12 @@ public class MessagingNode implements Node {
 	private MessagingNodeListener messagingNodeListener;
 	private MessagingNodeReceiver registryConnectionReceiver;
 	
-	private int receiveTracker = 0;
-	private int sendTracker = 0;
-	private int relayTracker = 0;
+	private AtomicInteger receiveTracker = new AtomicInteger(0);
+	private AtomicInteger sendTracker = new AtomicInteger(0);
+	private AtomicInteger relayTracker = new AtomicInteger(0);
 	
-	private long sendSummation = 0;
-	private long receiveSummation = 0;
+	private AtomicLong sendSummation = new AtomicLong(0);
+	private AtomicLong receiveSummation = new AtomicLong(0);
 	
 	public boolean connectToRegistry()
 	{
@@ -98,10 +100,35 @@ public class MessagingNode implements Node {
 			onEvent((Message) ev);
 			break;
 		case PULL_TRAFFIC_SUMMARY:
+			onEvent((PullTrafficSummary) ev);
 			break;
 		default:
 			break;
 		}
+	}
+	
+	private void onEvent(PullTrafficSummary ev)
+	{
+		String ownIpAddress = registryConnection.getInetAddress().getHostAddress();
+		int portnum = messagingNodeListener.getLocalPort();
+		TrafficSummary ts = new TrafficSummary(ownIpAddress, portnum, sendTracker.intValue(), sendSummation.longValue(), receiveTracker.intValue(), receiveSummation.longValue(), relayTracker.intValue());
+		
+		try
+		{
+			registrySender.send(ts.getBytes());
+			
+			// Reset counters
+			sendTracker.set(0);
+			sendSummation.set(0);
+			receiveTracker.set(0);
+			receiveSummation.set(0);
+			relayTracker.set(0);
+		}
+		catch(IOException e)
+		{
+			System.out.println("Can't send traffic summary to registry");
+		}
+		
 	}
 	
 	private void onEvent(PeerConnect ev, Socket s)
@@ -137,8 +164,8 @@ public class MessagingNode implements Node {
 		String ownAddress = registryConnection.getInetAddress().getHostAddress() + ":" + messagingNodeListener.getLocalPort();
 		if (destination.equals(ownAddress))
 		{
-			receiveSummation += ev.getPayload();
-			receiveTracker++;
+			receiveSummation.addAndGet(ev.getPayload());
+			receiveTracker.getAndIncrement();
 			return;
 		}
 		else
@@ -147,7 +174,7 @@ public class MessagingNode implements Node {
 			{
 				TCPSender t = new TCPSender(routingEntries.get(destination));
 				t.send(ev.getBytes());
-				relayTracker++;
+				relayTracker.getAndIncrement();
 			}
 			catch(IOException e)
 			{
@@ -188,7 +215,8 @@ public class MessagingNode implements Node {
 				{
 					TCPSender t = new TCPSender(s);
 					t.send(new Message(new InetSocketAddress(destinationParsed[0], Integer.parseInt(destinationParsed[1])), payload).getBytes());
-					sendSummation += payload;
+					sendTracker.getAndIncrement();
+					sendSummation.addAndGet(payload);
 				}
 				catch(IOException e)
 				{
@@ -196,6 +224,15 @@ public class MessagingNode implements Node {
 					System.exit(0);
 				}
 			}
+		}
+		
+		try
+		{
+			registrySender.send(new TaskComplete(registryConnection.getInetAddress().getHostAddress(), messagingNodeListener.getLocalPort()).getBytes());
+		}
+		catch(IOException e)
+		{
+			System.out.println("Error in sending task completing status");
 		}
 	}
 	
@@ -539,6 +576,11 @@ public class MessagingNode implements Node {
 			
 		}
 		
+		private Event readEventPullTrafficSummary() throws IOException
+		{
+			return new PullTrafficSummary();
+		}
+		
 		public void handleEvent(EventType evType)
 		{
 			Event ev = null;
@@ -571,6 +613,7 @@ public class MessagingNode implements Node {
 					onEvent(ev);
 					break;
 				case PULL_TRAFFIC_SUMMARY:
+					ev = readEventPullTrafficSummary();
 					onEvent(ev);
 					break;
 					

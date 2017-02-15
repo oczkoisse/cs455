@@ -1,6 +1,7 @@
 package cs455.overlay.wireformats;
 
 import java.io.BufferedOutputStream;
+import java.net.*;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -11,12 +12,13 @@ public class TrafficSummary implements Event {
 	private int portnum;
 	
 	private int sentCount,
-				sentSum,
 				receivedCount,
-				receivedSum,
 				relayedCount;
 	
-	public TrafficSummary(String ipAddress, int portnum, int sentCount, int sentSum, int receivedCount, int receivedSum, int relayedCount)
+	private long receivedSum,
+				 sentSum;
+	
+	public TrafficSummary(String ipAddress, int portnum, int sentCount, long sentSum, int receivedCount, long receivedSum, int relayedCount)
 	{
 		this.ipAddress = ipAddress;
 		this.portnum = portnum;
@@ -43,9 +45,9 @@ public class TrafficSummary implements Event {
 			dout.writeInt(portnum);
 			
 			dout.writeInt(sentCount);
-			dout.writeInt(sentSum);
+			dout.writeLong(sentSum);
 			dout.writeInt(receivedCount);
-			dout.writeInt(receivedSum);
+			dout.writeLong(receivedSum);
 			dout.writeInt(relayedCount);
 			
 			dout.flush();
@@ -53,6 +55,36 @@ public class TrafficSummary implements Event {
 		}
 		
 		return bytes;
+	}
+	
+	public InetSocketAddress getAddress()
+	{
+		return new InetSocketAddress(ipAddress, portnum);
+	}
+	
+	public int getSentCount()
+	{
+		return sentCount;
+	}
+	
+	public int getReceivedCount()
+	{
+		return receivedCount;
+	}
+	
+	public long getSentSummation()
+	{
+		return sentSum;
+	}
+	
+	public long getReceivedSummation()
+	{
+		return receivedSum;
+	}
+	
+	public int getRelayCount()
+	{
+		return relayedCount;
 	}
 
 	@Override

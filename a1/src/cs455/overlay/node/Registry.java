@@ -1,5 +1,5 @@
 package cs455.overlay.node;
-
+import java.util.concurrent.TimeUnit;
 import cs455.overlay.util.*;
 import cs455.overlay.wireformats.*;
 import cs455.overlay.transport.*;
@@ -15,6 +15,9 @@ public class Registry implements Node {
 	private static Registry instance;
 	
 	private HashMap<Socket, InetSocketAddress> registeredNodes = new HashMap<Socket, InetSocketAddress>();
+	private HashSet<InetSocketAddress> taskCompleteNotReceived;
+	private HashSet<InetSocketAddress> summaryNotReceived;
+	private HashMap<InetSocketAddress, TrafficSummary> trafficSummaries;
 	
 	private static RegistryListener registryListener;
 	
@@ -49,14 +52,79 @@ public class Registry implements Node {
 		switch(ev.getType())
 		{
 		case TRAFFIC_SUMMARY:
+			onEvent((TrafficSummary) ev);
 			break;
 		case TASK_COMPLETE:
+			onEvent((TaskComplete) ev);
 			break;
 		default:
-			System.out.println("Unindentified message format");
+			System.out.println("Unidentified message format");
 			break;
 		}
 
+	}
+	
+	private void onEvent(TrafficSummary ev)
+	{
+		InetSocketAddress addr = ev.getAddress();
+		
+		if(summaryNotReceived.remove(addr))
+			trafficSummaries.put(addr, ev);
+		
+		if (summaryNotReceived.size() == 0)
+		{
+			// Print combined summaries
+			final String space = "   ";
+			long sentCount = 0, receivedCount = 0, sentSummation = 0, receivedSummation = 0;
+			for(Map.Entry<InetSocketAddress, TrafficSummary> entry: trafficSummaries.entrySet())
+			{
+				InetSocketAddress a = entry.getKey();
+				TrafficSummary ts = entry.getValue();
+				System.out.println(a.toString() + space + ts.getSentCount() + space + ts.getReceivedCount() + space + ts.getSentSummation() + space + ts.getReceivedSummation() + space + ts.getRelayCount());
+				sentCount += ts.getSentCount();
+				receivedCount += ts.getReceivedCount();
+				sentSummation += ts.getSentSummation();
+				receivedSummation += ts.getReceivedSummation();
+			}
+			
+			System.out.println(space + space + space + sentCount + space + receivedCount + space + sentSummation + space + receivedSummation);
+		}
+	}
+	
+	private void onEvent(TaskComplete ev)
+	{
+		InetSocketAddress a = ev.getAddress();
+		taskCompleteNotReceived.remove(a);
+		
+		// Check if all TaskComplete messages have been received
+		if (taskCompleteNotReceived.size() == 0)
+		{
+			System.out.println("All task completion messages received");
+			try
+			{
+				// If so, then wait for 20s
+				TimeUnit.SECONDS.sleep(20);
+			}
+			catch(InterruptedException e)
+			{
+				System.out.println(e.getMessage());
+			}
+			finally{
+				for(Socket s: registeredNodes.keySet())
+				{
+					// Issue PULL_TRAFFIC_SUMMARY
+					TCPSender t = new TCPSender(s);
+					try
+					{
+						t.send(new PullTrafficSummary().getBytes());
+					}
+					catch(IOException e)
+					{
+						System.out.println(e.getMessage());
+					}
+				}
+			}
+		}
 	}
 	
 	
@@ -131,6 +199,11 @@ public class Registry implements Node {
 		// Don't let any registration to proceed while setting up overlay
 		synchronized(registeredNodes)
 		{
+			// First set up record for noting reception of TASK_COMPLETE
+			taskCompleteNotReceived = new HashSet<InetSocketAddress>(registeredNodes.values());
+			summaryNotReceived = new HashSet<InetSocketAddress>(registeredNodes.values());
+			trafficSummaries = new HashMap<InetSocketAddress, TrafficSummary>();
+			
 			this.ov = new Overlay(numCons);
 			for (Map.Entry<Socket, MessagingNodesList> entry : ov.getMessagingNodesList().entrySet()) {
 			    Socket s = entry.getKey();
@@ -242,6 +315,30 @@ public class Registry implements Node {
 			return new DeregisterRequest(ip, port);
 		}
 		
+		private Event readEventTaskComplete() throws IOException
+		{
+			String ip = super.din.readUTF();
+			int port = super.din.readInt();
+			return new TaskComplete(ip, port);
+		}
+		
+		private Event readEventTrafficSummary() throws IOException
+		{
+			String ip = super.din.readUTF();
+			int port = super.din.readInt();
+			
+			int sentCount = super.din.readInt();
+			long sentSum = super.din.readLong();
+			int receivedCount = super.din.readInt();
+			long receivedSum = super.din.readLong();
+			int relayedCount = super.din.readInt();
+
+			TrafficSummary ev = new TrafficSummary(ip, port, sentCount, sentSum, receivedCount, receivedSum, relayedCount);
+			return ev;
+		}
+		
+		
+		
 		public void handleEvent(EventType evType)
 		{
 			Event ev = null;
@@ -258,12 +355,12 @@ public class Registry implements Node {
 					onEvent((DeregisterRequest) ev, super.sock);
 					break;
 				case TRAFFIC_SUMMARY:
-					//ev = readEventTrafficSummary();
-					//onEvent(ev);
+					ev = readEventTrafficSummary();
+					onEvent(ev);
 					break;
 				case TASK_COMPLETE:
-					//ev = readEventTaskComplete();
-					//onEvent(ev);
+					ev = readEventTaskComplete();
+					onEvent(ev);
 					break;
 				default:
 					System.out.println("Unknown message format received by registry");
