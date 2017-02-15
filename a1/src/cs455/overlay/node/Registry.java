@@ -103,16 +103,16 @@ public class Registry implements Node {
 		
 		synchronized(taskCompleteNotReceived)
 		{
-			System.out.println("Got the lock");
-			System.out.println(a.toString());
+			//System.out.println("Got the lock");
+			//System.out.println(a.toString());
 			taskCompleteNotReceived.remove(a);
-			System.out.println(taskCompleteNotReceived.size());
-			System.out.println(taskCompleteNotReceived.toString());
+			//System.out.println(taskCompleteNotReceived.size());
+			//System.out.println(taskCompleteNotReceived.toString());
 		
 			// Check if all TaskComplete messages have been received
 			if (taskCompleteNotReceived.size() == 0)
 			{
-				System.out.println("All task completion messages received");
+				System.out.println("All task completion messages received. Waiting...");
 				try
 				{
 					// If so, then wait for 20s

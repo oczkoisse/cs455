@@ -141,6 +141,7 @@ public class MessagingNode implements Node {
 		{
 			synchronized(connections)
 			{
+				System.out.println("Accepted connection request from " + ipAddress + ":" + port);
 				connections.put(ipAddress + ":" + port, s);
 			}
 		}
@@ -481,7 +482,7 @@ public class MessagingNode implements Node {
 				}
 				catch(IOException e)
 				{
-					System.out.println(e.getMessage());
+					System.out.println("Couldn't send register request to Registry: " + e.getMessage());
 					System.exit(0);
 				}
 			}
@@ -509,14 +510,14 @@ public class MessagingNode implements Node {
 		public MessagingNodeListener()
 		{
 			super();
-			System.out.println("Listening at " + super.sock.getInetAddress().getHostAddress() + ":" + super.sock.getLocalPort());
+			//System.out.println("Listening at " + super.sock.getInetAddress().getHostAddress() + ":" + super.sock.getLocalPort());
 		}
 		
 		public void handleClient(Socket s)
 		{
 			// Add the received connection to send messages later
 			Thread t = new Thread(new MessagingNodeReceiver(s));
-			t.setName("Messaging node " + super.sock.toString());
+			t.setName("Messaging node: " + super.sock.toString());
 			t.start();
 		}
 	}

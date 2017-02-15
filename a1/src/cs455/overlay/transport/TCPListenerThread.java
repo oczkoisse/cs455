@@ -48,7 +48,6 @@ public abstract class TCPListenerThread implements Runnable {
 			while (true)
 			{
 				Socket s = sock.accept();
-				//System.out.println("Accepted " + s.getInetAddress().getHostAddress() + ":" + s.getPort());
 				handleClient(s);
 			}
 		}
