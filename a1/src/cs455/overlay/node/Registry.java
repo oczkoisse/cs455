@@ -432,9 +432,9 @@ public class Registry implements Node {
 			{	
 				synchronized(registeredNodes)
 				{
-					for(Socket s: registeredNodes.keySet())	
+					for(InetSocketAddress a: registeredNodes.values())	
 					{
-						System.out.println(s.toString());
+						System.out.println(a.toString());
 					}
 				}
 			}
