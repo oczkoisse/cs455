@@ -37,6 +37,8 @@ public class MessagingNode implements Node {
 	private AtomicLong sendSummation = new AtomicLong(0);
 	private AtomicLong receiveSummation = new AtomicLong(0);
 	
+	int[] prev;
+	
 	public boolean connectToRegistry()
 	{
 		boolean success = false;
@@ -266,7 +268,7 @@ public class MessagingNode implements Node {
 			}
 		}
 		
-		System.out.println(mapHostNameToInt.size());
+		//System.out.println(mapHostNameToInt.size());
 		
 		final int infinity = Integer.MAX_VALUE;
 		int[][] graph = new int[nodeCount][nodeCount];
@@ -293,7 +295,7 @@ public class MessagingNode implements Node {
 		Integer distance[] = new Integer[nodeCount];
 		
 		// Previous to Undefined
-		int prev[] = new int[nodeCount];
+		prev = new int[nodeCount];
 		HashSet<Integer> vertices = new HashSet<Integer>();
 		
 		final int undefined = -1;
@@ -366,7 +368,7 @@ public class MessagingNode implements Node {
 			}	
 		}
 		
-		
+		/**
 		for(Map.Entry<String,Socket> s : routingEntries.entrySet())
 		{
 			if (s.getValue() == null)
@@ -385,7 +387,25 @@ public class MessagingNode implements Node {
 					System.out.println(s.getKey() + "----" + s.getValue().getInetAddress().getHostAddress() + ":" + s.getValue().getPort());
 			}
 		}
-		
+		*/
+	}
+	
+	private void printShortestPath()
+	{
+		if(prev != null)
+		{
+			for(int i=0; i<prev.length; i++)
+			{
+				int j = i;
+				System.out.print(j);
+				while(prev[j] != -1)
+				{
+					j = prev[j];
+					System.out.print(" <- " + j);
+				}
+				System.out.println();
+			}
+		}
 	}
 	
 	private void onEvent(LinkWeightsList ev)
@@ -652,7 +672,12 @@ public class MessagingNode implements Node {
 		
 		private boolean handlePrintShortestPath(String[] words)
 		{
-			return handleSingleWordCommands(words);
+			boolean isValid = handleSingleWordCommands(words);
+			if (isValid)
+			{
+				printShortestPath();
+			}
+			return isValid;
 		}
 		
 		private boolean handleExitOverlay(String[] words)
