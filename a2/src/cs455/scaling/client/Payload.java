@@ -61,9 +61,22 @@ public class Payload {
 		hashString = hashInt.toString(16);
 	}
 	
+	/**
+	 * Returns a hash of the current payload
+	 * @return
+	 */
 	public String getHash()
 	{
 		return hashString;
+	}
+	
+	/**
+	 * Returns a copy of payload data
+	 * @return
+	 */
+	public byte[] getBytes()
+	{
+		return data.clone();
 	}
 	
 	public enum Unit {
