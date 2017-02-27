@@ -7,6 +7,7 @@ class ThreadPoolManager implements Runnable {
 	private BlockingQueue<Work> pendingWorks;
 	private BlockingQueue<Worker> availableWorkers;
 	private int size;
+	
 	public ThreadPoolManager(int poolSize)
 	{
 		pendingWorks = new BlockingQueue<Work>();
@@ -17,7 +18,7 @@ class ThreadPoolManager implements Runnable {
 	@Override
 	public void run() {
 		
-		System.out.println("Starting threads");
+		System.out.println("Starting " + this.size + "threads");
 
 		for(int i=0; i<this.size; i++)
 		{
@@ -44,11 +45,5 @@ class ThreadPoolManager implements Runnable {
 	public void addWork(Work w)
 	{
 		pendingWorks.enqueue(w);
-	}
-
-	public static void main(String[] args)
-	{
-		ThreadPoolManager tpm = new ThreadPoolManager(10);
-		tpm.run();
 	}
 }

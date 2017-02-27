@@ -15,7 +15,7 @@ public class Server implements Runnable {
 	
 	private ArrayList<Work> pendingWorks = new ArrayList<Work>();
 	private HashMap<SelectionKey, ByteBuffer> pendingWrites = new HashMap<SelectionKey, ByteBuffer>();
-	private static ThreadPoolManager tpm;
+	private ThreadPoolManager tpm;
 	
 	private static Server serverInstance;
 	
@@ -26,11 +26,10 @@ public class Server implements Runnable {
 	{
 		Server.portnum = portnum;
 		Server.poolSize = poolSize;
-		
-		Server.tpm = new ThreadPoolManager(poolSize);
+		this.tpm = new ThreadPoolManager(Server.poolSize);
 	}
 	
-	public static void init(int portnum, int poolsize)
+	public static void init(int portnum, int poolSize)
 	{
 		if(serverInstance == null)
 		{
@@ -50,10 +49,8 @@ public class Server implements Runnable {
 				System.out.println(e.getMessage());
 				System.exit(0);
 			}
-			
 			serverInstance = new Server(portnum, poolSize);
 			
-			new Thread(Server.tpm).start();
 		}
 		else
 			throw new IllegalStateException("Repeated initialization");
@@ -80,6 +77,8 @@ public class Server implements Runnable {
 	
 	public void run()
 	{
+		new Thread(this.tpm).start();
+		
 		while (true)
 		{
 			// apply updates
@@ -189,7 +188,6 @@ public class Server implements Runnable {
 			{
 				portnum = Integer.parseInt(args[0]);
 				poolSize = Integer.parseInt(args[1]);
-			
 				Server.init(portnum, poolSize);
 			}
 			catch(NumberFormatException e)
