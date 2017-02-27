@@ -2,7 +2,7 @@ package cs455.scaling.server;
 
 import java.util.*;
 
-public class BlockingQueue<T> {
+class BlockingQueue<T> {
 	
 	private ArrayDeque<T> q;
 	

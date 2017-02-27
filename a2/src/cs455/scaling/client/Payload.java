@@ -49,16 +49,31 @@ public class Payload {
 		
 	}
 	
+	private void updateData(byte[] data)
+	{
+		if (this.data.length == data.length)
+		{
+			System.arraycopy(data, 0, this.data, 0, this.data.length);
+		}
+		else
+			throw new IllegalArgumentException("Input array is too large for payload");
+	}
+	
+	private void updateHash()
+	{
+		byte[] hash = hasher.digest(this.data);
+		BigInteger hashInt = new BigInteger(1, hash);
+		this.hashString = hashInt.toString(16);
+	}
+	
 	/**
 	 * Refreshes the data with new random data
 	 * Also, recomputes the hash
 	 */
 	public void refresh()
 	{
-		rng.nextBytes(data);
-		byte[] hash = hasher.digest(data);
-		BigInteger hashInt = new BigInteger(1, hash);
-		hashString = hashInt.toString(16);
+		rng.nextBytes(this.data);
+		updateHash();
 	}
 	
 	/**
