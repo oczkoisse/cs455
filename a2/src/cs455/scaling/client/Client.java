@@ -1,9 +1,14 @@
 package cs455.scaling.client;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.*;
 import java.util.*;
 
+import cs455.scaling.util.Hasher;
+
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
 
 public class Client {
 	
@@ -13,7 +18,8 @@ public class Client {
 	private int serverPort;	
 	private int messageRate;
 	
-	private Socket serverCon;
+	private Selector selector;
+	private SocketChannel selChannel;
 	
 	private int sentCounter;
 	private int receivedCounter;
@@ -25,10 +31,13 @@ public class Client {
 		this.serverName = serverName;
 		this.serverPort = serverPort;
 		this.messageRate = messageRate;
-				
+			
 		try
 		{
-			this.serverCon = new Socket(serverName, serverPort);
+			this.selector = Selector.open();
+			this.selChannel = SocketChannel.open(new InetSocketAddress(this.serverName, this.serverPort));
+			this.selChannel.configureBlocking(false);
+			this.selChannel.register(this.selector, SelectionKey.OP_CONNECT);
 		}
 		catch(IOException e)
 		{
@@ -42,16 +51,86 @@ public class Client {
 		this.hashRecords = new LinkedList<String>();
 	}
 	
-	public void start()
+	public void run()
 	{
 		this.payload = new Payload(8, Payload.Unit.K_BYTES);
 		
 		while(true)
 		{
-			// Send the payload
+			// Send the payload or receive the hash
 			
-			// Append the hash
-			this.hashRecords.add(this.payload.getHash());
+			try
+			{
+				this.selector.select();
+			}
+			catch(IOException e)
+			{
+				System.out.println(e.getMessage());
+				System.exit(0);
+			}
+			
+			Iterator<SelectionKey> selectedKeys = this.selector.selectedKeys().iterator();
+			
+			while(selectedKeys.hasNext())
+			{
+				SelectionKey k = selectedKeys.next();
+				
+				if(k.isValid())
+				{
+					if(k.isWritable())
+					{
+						ByteBuffer writeBuffer = this.payload.getData();
+						try
+						{
+							while(writeBuffer.hasRemaining())
+								this.selChannel.write(writeBuffer);
+						}
+						catch(IOException e)
+						{
+							System.out.println(e.getMessage());
+							System.exit(0);
+						}
+						// Append the hash
+						this.hashRecords.add(this.payload.getHash());
+						
+						this.sentCounter++;
+					}
+					else if (k.isReadable())
+					{
+						ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
+						
+						try
+						{
+							while(readBuffer.hasRemaining())
+								this.selChannel.read(readBuffer);
+							
+							byte[] hash = new byte[Hasher.getHashLength()];
+							BigInteger hashInt = new BigInteger(1, hash);
+							String hashString = hashInt.toString(16);
+							
+							// Iterate on hashRecords and remove hashString
+							Iterator<String> r = hashRecords.iterator();
+							while(r.hasNext())
+							{
+								if(r.next().equals(hashString))
+								{
+									r.remove();
+									break;
+								}
+							}
+						}
+						catch(IOException e)
+						{
+							System.out.println(e.getMessage());
+							System.exit(0);
+						}
+						
+						this.receivedCounter++;
+					}
+				}
+				
+				selectedKeys.remove();
+			}
 			
 			// Sleep for some time
 			try
@@ -70,8 +149,30 @@ public class Client {
 		
 	}
 	
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub	
+	public static void main(String[] args)
+	{
+		if(args.length == 3)
+		{
+			String serverName = args[0];
+			int serverPort, messageRate;
+			try
+			{
+				serverPort = Integer.parseInt(args[1]);
+				messageRate = Integer.parseInt(args[2]);
+				Client c = new Client(serverName, serverPort, messageRate);
+				c.run();
+			}
+			catch(NumberFormatException e)
+			{
+				System.out.println("Usage: cs455.scaling.client.Client <server-name> <server-port> <message-rate>");
+				System.exit(0);
+			}
+			
+		}
+		else
+		{
+			System.out.println("Usage: cs455.scaling.client.Client <server-name> <server-port> <message-rate>");
+		}
 	}
 
 }

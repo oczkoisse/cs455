@@ -40,7 +40,7 @@ public class Server implements Runnable {
 				
 				Server.serverChannel = ServerSocketChannel.open();
 				serverChannel.configureBlocking(false);
-				serverChannel.bind(new InetSocketAddress(InetAddress.getLocalHost().getHostName(), Server.portnum));
+				serverChannel.bind(new InetSocketAddress("0.0.0.0", Server.portnum));
 				
 				serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 			}

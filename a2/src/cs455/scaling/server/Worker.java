@@ -107,14 +107,14 @@ class Worker implements Runnable {
 	@Override
 	public void run()
 	{
-		System.out.println("Worker started");
+		//System.out.println("Worker started");
 		synchronized(currentWorkLock)
 		{
 			while (true)
 			{
 				while(currentWork == null)
 				{
-					System.out.println("Waiting");
+					//System.out.println("Waiting");
 					try
 					{
 						currentWorkLock.wait();
@@ -125,7 +125,7 @@ class Worker implements Runnable {
 						break;
 					}
 				}
-				System.out.println("Got some work");
+				//System.out.println("Got some work");
 				idle = false;
 				try
 				{

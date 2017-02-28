@@ -2,6 +2,7 @@ package cs455.scaling.client;
 
 import java.util.*;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.*;
 
 public class Payload {
@@ -49,16 +50,6 @@ public class Payload {
 		
 	}
 	
-	private void updateData(byte[] data)
-	{
-		if (this.data.length == data.length)
-		{
-			System.arraycopy(data, 0, this.data, 0, this.data.length);
-		}
-		else
-			throw new IllegalArgumentException("Input array is too large for payload");
-	}
-	
 	private void updateHash()
 	{
 		byte[] hash = hasher.digest(this.data);
@@ -77,7 +68,7 @@ public class Payload {
 	}
 	
 	/**
-	 * Returns a hash of the current payload
+	 * Returns a hash of the current payload as a string
 	 * @return
 	 */
 	public String getHash()
@@ -86,12 +77,12 @@ public class Payload {
 	}
 	
 	/**
-	 * Returns a copy of payload data
+	 * Returns a read only form of payload data
 	 * @return
 	 */
-	public byte[] getBytes()
+	public ByteBuffer getData()
 	{
-		return data.clone();
+		return ByteBuffer.wrap(data).asReadOnlyBuffer();
 	}
 	
 	public enum Unit {

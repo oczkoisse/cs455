@@ -30,6 +30,11 @@ public class Hasher {
 		return ByteBuffer.wrap(msgDigest.digest(toHash));
 	}
 	
+	public static int getHashLength()
+	{
+		return 20;
+	}
+	
 	/*
 	 * Source: http://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
 	 * Only used to test the working
