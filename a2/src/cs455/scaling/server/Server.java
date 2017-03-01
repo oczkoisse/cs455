@@ -22,11 +22,39 @@ public class Server implements Runnable {
 	private static ServerSocketChannel serverChannel;
 	private static Selector selector;
 	
+	
+	private volatile int activeConnections;
+	private Integer messagesProcessed;
+	
 	private Server(int portnum, int poolSize)
 	{
 		Server.portnum = portnum;
 		Server.poolSize = poolSize;
 		this.tpm = new ThreadPoolManager(Server.poolSize);
+		
+		this.activeConnections = 0;
+		this.messagesProcessed = 0;
+	}
+	
+	private class Summary extends TimerTask
+	{
+		public void run()
+		{
+			synchronized(System.out)
+			{
+				double rate;
+				synchronized(messagesProcessed)
+				{
+					rate = messagesProcessed / 5.0;
+					messagesProcessed = 0;
+				}
+				System.out.println("[" + super.scheduledExecutionTime() + "] " 		+
+						   "Current Server Throughput: "	 						+
+							rate + " messages/s, "						 			+
+						   "Active Client Connections: " 							+
+							activeConnections);
+			}
+		}
 	}
 	
 	public static void init(int portnum, int poolSize)
@@ -75,55 +103,66 @@ public class Server implements Runnable {
 		Server.selector.wakeup();
 	}
 	
+	private void completePendingWorks()
+	{
+		synchronized(pendingWorks)
+		{
+			Iterator<Work> pw = pendingWorks.iterator();
+			while(pw.hasNext())
+			{
+				Work w = pw.next();
+				
+				switch(w.getType())
+				{
+				case READ: 
+					synchronized(messagesProcessed)
+					{
+						messagesProcessed++;
+					}
+					w.getSelectionKey().interestOps(SelectionKey.OP_READ);
+					break;
+				case WRITE:
+					w.getSelectionKey().interestOps(SelectionKey.OP_WRITE);
+					pendingWrites.put(w.getSelectionKey(), ((WriteWork) w).getData());
+					break;
+				case HASH: 
+					tpm.addWork(w);
+					break;
+				case DEREGISTER: 
+					w.getSelectionKey().cancel();
+					
+					try
+					{
+						w.getSelectionKey().channel().close();
+					}
+					catch(IOException e)
+					{
+						System.out.println(e.getMessage());
+						System.exit(0);
+					}
+					break;
+				}
+				
+				pw.remove();
+			}
+		}
+	}
+	
 	public void run()
 	{
 		new Thread(this.tpm).start();
 		
+		Timer t = new Timer();
+		t.scheduleAtFixedRate(new Summary(), new Date(), 5000);
+		
 		while (true)
 		{
 			// apply updates
-			synchronized(pendingWorks)
-			{
-				Iterator<Work> pw = pendingWorks.iterator();
-				while(pw.hasNext())
-				{
-					Work w = pw.next();
-					
-					switch(w.getType())
-					{
-					case READ: 
-						w.getSelectionKey().interestOps(SelectionKey.OP_READ);
-						break;
-					case WRITE: 
-						w.getSelectionKey().interestOps(SelectionKey.OP_WRITE);
-						pendingWrites.put(w.getSelectionKey(), ((WriteWork) w).getData());
-						break;
-					case HASH: 
-						tpm.addWork(w);
-						break;
-					case DEREGISTER: 
-						w.getSelectionKey().cancel();
-						
-						try
-						{
-							w.getSelectionKey().channel().close();
-						}
-						catch(IOException e)
-						{
-							System.out.println(e.getMessage());
-							System.exit(0);
-						}
-						break;
-					}
-					
-					pw.remove();
-				}
-			}
+			completePendingWorks();
 			
 			// call select
 			try
 			{
-				System.out.println("Selecting");
 				Server.selector.select();
 			}
 			catch(IOException e)
@@ -149,8 +188,8 @@ public class Server implements Runnable {
 							{
 								client.configureBlocking(false);
 								client.register(Server.selector, SelectionKey.OP_READ);
+								activeConnections++;
 							}
-							
 						}
 						else if(selKey.isReadable())
 						{

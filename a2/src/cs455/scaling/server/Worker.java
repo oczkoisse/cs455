@@ -88,18 +88,29 @@ class Worker implements Runnable {
 	{
 		synchronized(currentWorkLock)
 		{
+			synchronized(System.out)
+			{
+				switch(currentWork.getType())
+				{
+				case READ: System.out.println(threadName + " reading");
+				break;
+				case WRITE: System.out.println(threadName + " writing");
+				break;
+				case HASH: System.out.println(threadName + " hashing");
+				break;
+				}
+				
+			}
+			
 			switch(currentWork.getType())
 			{
 			case READ:
-				System.out.println(threadName + " reading");
 				handleRead();
 				break;
 			case WRITE: 
-				System.out.println(threadName + " writing");
 				handleWrite();
 				break;
 			case HASH: 
-				System.out.println(threadName + " hashing");
 				handleHash();
 				break;
 			default:

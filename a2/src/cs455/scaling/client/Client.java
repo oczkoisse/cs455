@@ -10,7 +10,7 @@ import cs455.scaling.util.Hasher;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 
-public class Client {
+public class Client implements Runnable {
 	
 	private Payload payload;
 
@@ -21,8 +21,8 @@ public class Client {
 	private Selector selector;
 	private SocketChannel selChannel;
 	
-	private int sentCounter;
-	private int receivedCounter;
+	private Integer sentCounter;
+	private Integer receivedCounter;
 	
 	private LinkedList<String> hashRecords;
 	
@@ -53,8 +53,36 @@ public class Client {
 		this.hashRecords = new LinkedList<String>();
 	}
 	
+	private class Summary extends TimerTask
+	{
+		public void run()
+		{
+			synchronized(System.out)
+			{
+				synchronized(sentCounter)
+				{
+					synchronized(receivedCounter)
+					{
+						System.out.println("[" + super.scheduledExecutionTime() + "] " 		+
+								   "Total Sent Count: "	 									+
+									sentCounter + ", "							 			+
+								   "Total Received Count: "		 							+
+									receivedCounter);
+						
+						sentCounter = 0;
+						receivedCounter = 0;
+					}
+				}
+			}
+			
+		}
+	}
+	
 	public void run()
 	{
+		Timer t = new Timer();
+		t.scheduleAtFixedRate(new Summary(), new Date(), 10000);
+		
 		this.payload = new Payload(8, Payload.Unit.K_BYTES);
 		
 		while(true)
@@ -87,44 +115,55 @@ public class Client {
 							if(success)
 							{
 								System.out.println("Connected");
-								k.interestOps(SelectionKey.OP_WRITE);
+								k.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
 							}
 						}
-						else if(k.isWritable())
+						else
 						{
-							ByteBuffer writeBuffer = this.payload.getData();
-							
-							while(writeBuffer.hasRemaining())
-								this.selChannel.write(writeBuffer);
-							
-							// Append the hash
-							this.hashRecords.add(this.payload.getHash());
-							
-							this.sentCounter++;
-						}
-						else if (k.isReadable())
-						{
-							ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
-							
-							while(readBuffer.hasRemaining())
-								this.selChannel.read(readBuffer);
-							
-							byte[] hash = new byte[Hasher.getHashLength()];
-							BigInteger hashInt = new BigInteger(1, hash);
-							String hashString = hashInt.toString(16);
-							
-							// Iterate on hashRecords and remove hashString
-							Iterator<String> r = hashRecords.iterator();
-							while(r.hasNext())
+							if(k.isWritable())
 							{
-								if(r.next().equals(hashString))
+								System.out.println("Writing");
+								ByteBuffer writeBuffer = this.payload.getData();
+								
+								while(writeBuffer.hasRemaining())
+									this.selChannel.write(writeBuffer);
+								
+								// Append the hash
+								this.hashRecords.add(this.payload.getHash());
+								
+								synchronized(this.sentCounter)
 								{
-									r.remove();
-									break;
+									this.sentCounter++;
 								}
 							}
-							
-							this.receivedCounter++;
+							if (k.isReadable())
+							{
+								System.out.println("Reading");
+								ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
+								
+								while(readBuffer.hasRemaining())
+									this.selChannel.read(readBuffer);
+								
+								byte[] hash = new byte[Hasher.getHashLength()];
+								BigInteger hashInt = new BigInteger(1, hash);
+								String hashString = hashInt.toString(16);
+								
+								// Iterate on hashRecords and remove hashString
+								Iterator<String> r = hashRecords.iterator();
+								while(r.hasNext())
+								{
+									if(r.next().equals(hashString))
+									{
+										r.remove();
+										break;
+									}
+								}
+								
+								synchronized(this.receivedCounter)
+								{
+									this.receivedCounter++;
+								}
+							}
 						}
 					}
 					
