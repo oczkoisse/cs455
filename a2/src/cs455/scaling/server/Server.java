@@ -33,6 +33,8 @@ public class Server implements Runnable {
 	{
 		if(serverInstance == null)
 		{
+			serverInstance = new Server(portnum, poolSize);
+			
 			// Arrange to listen at this port number
 			try
 			{
@@ -41,7 +43,6 @@ public class Server implements Runnable {
 				Server.serverChannel = ServerSocketChannel.open();
 				serverChannel.configureBlocking(false);
 				serverChannel.bind(new InetSocketAddress("0.0.0.0", Server.portnum));
-				
 				serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 			}
 			catch(IOException e)
@@ -49,7 +50,6 @@ public class Server implements Runnable {
 				System.out.println(e.getMessage());
 				System.exit(0);
 			}
-			serverInstance = new Server(portnum, poolSize);
 			
 		}
 		else
@@ -145,9 +145,12 @@ public class Server implements Runnable {
 						{
 							ServerSocketChannel serv = (ServerSocketChannel) (selKey.channel());
 							SocketChannel client = serv.accept();
-							client.configureBlocking(false);
+							if (client != null)
+							{
+								client.configureBlocking(false);
+								client.register(Server.selector, SelectionKey.OP_READ);
+							}
 							
-							client.register(Server.selector, SelectionKey.OP_READ);
 						}
 						else if(selKey.isReadable())
 						{
@@ -168,11 +171,11 @@ public class Server implements Runnable {
 			}
 			catch(ClosedChannelException e)
 			{
-				
+				System.out.println(e.getMessage());
 			}
 			catch(IOException e)
 			{
-				
+				System.out.println(e.getMessage());
 			}
 			
 		}

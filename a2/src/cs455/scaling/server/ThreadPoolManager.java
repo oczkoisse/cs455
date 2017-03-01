@@ -17,16 +17,12 @@ class ThreadPoolManager implements Runnable {
 	
 	@Override
 	public void run() {
-		
-		System.out.println("Starting " + this.size + "threads");
-
 		for(int i=0; i<this.size; i++)
 		{
 			Worker wkr = new Worker(this);
 			availableWorkers.enqueue(wkr);
-			new Thread(wkr).start();
+			new Thread(wkr, "Worker " + i).start();
 		}
-		System.out.println("Threads started");
 		while(true)
 		{
 			Work w = pendingWorks.dequeue();

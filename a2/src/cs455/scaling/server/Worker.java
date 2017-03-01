@@ -19,6 +19,8 @@ class Worker implements Runnable {
 	// Local read buffer for reading data from a channel
 	private ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 	
+	private String threadName;
+	
 	public Worker(ThreadPoolManager manager)
 	{
 		this.manager = manager;
@@ -26,6 +28,8 @@ class Worker implements Runnable {
 		currentWork = null;
 		currentWorkLock = new Object();
 		idle = true;
+		
+		this.threadName = "Unknown";
 	}
 	
 	private void handleRead() throws IOException
@@ -86,13 +90,16 @@ class Worker implements Runnable {
 		{
 			switch(currentWork.getType())
 			{
-			case READ: 
+			case READ:
+				System.out.println(threadName + " reading");
 				handleRead();
 				break;
 			case WRITE: 
+				System.out.println(threadName + " writing");
 				handleWrite();
 				break;
 			case HASH: 
+				System.out.println(threadName + " hashing");
 				handleHash();
 				break;
 			default:
@@ -107,14 +114,14 @@ class Worker implements Runnable {
 	@Override
 	public void run()
 	{
-		//System.out.println("Worker started");
+		this.threadName = Thread.currentThread().getName();
+		
 		synchronized(currentWorkLock)
 		{
 			while (true)
 			{
 				while(currentWork == null)
 				{
-					//System.out.println("Waiting");
 					try
 					{
 						currentWorkLock.wait();
@@ -125,7 +132,6 @@ class Worker implements Runnable {
 						break;
 					}
 				}
-				//System.out.println("Got some work");
 				idle = false;
 				try
 				{

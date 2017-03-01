@@ -35,13 +35,15 @@ public class Client {
 		try
 		{
 			this.selector = Selector.open();
-			this.selChannel = SocketChannel.open(new InetSocketAddress(this.serverName, this.serverPort));
+			this.selChannel = SocketChannel.open();
 			this.selChannel.configureBlocking(false);
+			this.selChannel.connect(new InetSocketAddress(this.serverName, this.serverPort));
+			
 			this.selChannel.register(this.selector, SelectionKey.OP_CONNECT);
 		}
 		catch(IOException e)
 		{
-			System.out.println("Can't connect to server. Exiting...");
+			System.out.println(e.getMessage());
 			System.exit(0);
 		}
 		
@@ -71,36 +73,39 @@ public class Client {
 			
 			Iterator<SelectionKey> selectedKeys = this.selector.selectedKeys().iterator();
 			
-			while(selectedKeys.hasNext())
+			try
 			{
-				SelectionKey k = selectedKeys.next();
-				
-				if(k.isValid())
+				while(selectedKeys.hasNext())
 				{
-					if(k.isWritable())
+					SelectionKey k = selectedKeys.next();
+					
+					if(k.isValid())
 					{
-						ByteBuffer writeBuffer = this.payload.getData();
-						try
+						if(k.isConnectable())
 						{
+							boolean success = ((SocketChannel) k.channel()).finishConnect();
+							if(success)
+							{
+								System.out.println("Connected");
+								k.interestOps(SelectionKey.OP_WRITE);
+							}
+						}
+						else if(k.isWritable())
+						{
+							ByteBuffer writeBuffer = this.payload.getData();
+							
 							while(writeBuffer.hasRemaining())
 								this.selChannel.write(writeBuffer);
+							
+							// Append the hash
+							this.hashRecords.add(this.payload.getHash());
+							
+							this.sentCounter++;
 						}
-						catch(IOException e)
+						else if (k.isReadable())
 						{
-							System.out.println(e.getMessage());
-							System.exit(0);
-						}
-						// Append the hash
-						this.hashRecords.add(this.payload.getHash());
-						
-						this.sentCounter++;
-					}
-					else if (k.isReadable())
-					{
-						ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
-						
-						try
-						{
+							ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
+							
 							while(readBuffer.hasRemaining())
 								this.selChannel.read(readBuffer);
 							
@@ -118,18 +123,18 @@ public class Client {
 									break;
 								}
 							}
+							
+							this.receivedCounter++;
 						}
-						catch(IOException e)
-						{
-							System.out.println(e.getMessage());
-							System.exit(0);
-						}
-						
-						this.receivedCounter++;
 					}
+					
+					selectedKeys.remove();
 				}
-				
-				selectedKeys.remove();
+			}
+			catch(IOException e)
+			{
+				System.out.println(e.getMessage());
+				System.exit(0);
 			}
 			
 			// Sleep for some time
