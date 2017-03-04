@@ -9,7 +9,7 @@ public class Payload {
 	
 	private byte[] data;
 
-	private Random rng;
+	private final Random rng;
 	
 	private String hashString;
 	
@@ -52,6 +52,7 @@ public class Payload {
 	
 	private void updateHash()
 	{
+		hasher.reset();
 		byte[] hash = hasher.digest(this.data);
 		BigInteger hashInt = new BigInteger(1, hash);
 		this.hashString = hashInt.toString(16);
