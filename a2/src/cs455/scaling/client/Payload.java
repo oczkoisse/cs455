@@ -1,10 +1,12 @@
 package cs455.scaling.client;
 
 import java.util.*;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.*;
 
+import cs455.scaling.util.Hasher;
+
+// Not thread safe
 public class Payload {
 	
 	private byte[] data;
@@ -13,7 +15,7 @@ public class Payload {
 	
 	private String hashString;
 	
-	private MessageDigest hasher;
+	
 	/**
 	 * Initializes the payload with random data of specified size
 	 * @param size The size of the payload
@@ -37,25 +39,18 @@ public class Payload {
 		data = new byte[size * multiplier];
 		rng = new Random();
 		
-		try
-		{
-			hasher = MessageDigest.getInstance("SHA1");
-		}
-		catch(NoSuchAlgorithmException e)
-		{
-			throw new RuntimeException(e.getMessage());
-		}
-		
 		refresh();
 		
 	}
 	
-	private void updateHash()
+	private void updateHashString()
 	{
-		hasher.reset();
-		byte[] hash = hasher.digest(this.data);
-		BigInteger hashInt = new BigInteger(1, hash);
-		this.hashString = hashInt.toString(16);
+		this.hashString = Hasher.hashAsString(ByteBuffer.wrap(this.data));
+	}
+	
+	private void updateData()
+	{
+		rng.nextBytes(this.data);
 	}
 	
 	/**
@@ -64,15 +59,15 @@ public class Payload {
 	 */
 	public void refresh()
 	{
-		rng.nextBytes(this.data);
-		updateHash();
+		updateData();
+		updateHashString();
 	}
 	
 	/**
 	 * Returns a hash of the current payload as a string
 	 * @return
 	 */
-	public String getHash()
+	public String getHashString()
 	{
 		return hashString;
 	}

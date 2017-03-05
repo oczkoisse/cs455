@@ -1,14 +1,22 @@
 package cs455.scaling.util;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+// Thread safe
 public class Hasher {
-	private MessageDigest msgDigest;
 	
-	public Hasher()
+	private static final int hashLength = 20; //SHA-1 is 20 bytes long
+
+	private Hasher()
+	{		
+	}
+	
+	private static MessageDigest getMessageDigest()
 	{
+		MessageDigest msgDigest = null;
 		try
 		{
 			msgDigest = MessageDigest.getInstance("SHA1");
@@ -17,48 +25,38 @@ public class Hasher {
 		{
 			System.out.println(e.getMessage());
 		}
+		return msgDigest;
 	}
 	
-	public ByteBuffer hash(ByteBuffer data)
+	public static ByteBuffer hash(ByteBuffer data)
 	{
-		ByteBuffer rdata = data.asReadOnlyBuffer();
+		MessageDigest msgDigest = getMessageDigest();
+		byte[] toHash = new byte[data.remaining()];
+		data.get(toHash);
 		
-		// Allocate 160 bits for SHA1 hash
-		byte[] toHash = new byte[rdata.remaining()];
-		rdata.get(toHash);
+		return ByteBuffer.wrap(msgDigest.digest(toHash)).asReadOnlyBuffer();
+	}
+	
+	public static String hashAsString(ByteBuffer data)
+	{
+		return convHashToString(hash(data));
+	}
+	
+	// Assume that client code will get 'hash' ready to be drained
+	public static String convHashToString(ByteBuffer hash)
+	{
+		// Promise to not write to this buffer
+		ByteBuffer temp = hash.asReadOnlyBuffer();
 		
-		return ByteBuffer.wrap(msgDigest.digest(toHash));
+		byte[] hashArr = new byte[getHashLength()];
+		temp.get(hashArr);
+		
+		BigInteger hashInt = new BigInteger(1, hashArr);
+		return hashInt.toString(16);
 	}
 	
 	public static int getHashLength()
 	{
-		return 20;
+		return hashLength;
 	}
-	
-	/*
-	 * Source: http://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
-	 * Only used to test the working
-	
-	final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-	public static String bytesToHex(byte[] bytes) {
-	    char[] hexChars = new char[bytes.length * 2];
-	    for ( int j = 0; j < bytes.length; j++ ) {
-	        int v = bytes[j] & 0xFF;
-	        hexChars[j * 2] = hexArray[v >>> 4];
-	        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-	    }
-	    return new String(hexChars);
-	}
-	*/
-	
-	/*
-	public static void main(String[] args)
-	{
-		String s = "The quick brown fox jumps over the lazy dog";
-		Hasher h = new Hasher();
-		ByteBuffer o = h.hash(ByteBuffer.wrap(s.getBytes()));
-		
-		System.out.println(bytesToHex(o.array()));
-	}
-	*/
 }

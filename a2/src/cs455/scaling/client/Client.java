@@ -14,9 +14,9 @@ public class Client implements Runnable {
 	
 	private Payload payload;
 
-	private String serverName;
-	private int serverPort;	
-	private int messageRate;
+	private final String serverName;
+	private final int serverPort;	
+	private final int messageRate;
 	
 	private Selector selector;
 	private SocketChannel selChannel;
@@ -107,61 +107,61 @@ public class Client implements Runnable {
 				{
 					SelectionKey k = selectedKeys.next();
 					
-					if(k.isValid())
+					if (!k.isValid())
+						continue;
+					
+					if(k.isConnectable())
 					{
-						if(k.isConnectable())
+						boolean success = ((SocketChannel) k.channel()).finishConnect();
+						if(success)
 						{
-							boolean success = ((SocketChannel) k.channel()).finishConnect();
-							if(success)
+							System.out.println("Connected");
+							k.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+						}
+					}
+					else
+					{
+						if(k.isWritable())
+						{
+							System.out.println("Writing");
+							ByteBuffer writeBuffer = this.payload.getData();
+							
+							while(writeBuffer.hasRemaining())
+								this.selChannel.write(writeBuffer);
+							
+							// Append the hash
+							this.hashRecords.add(this.payload.getHashString());
+							
+							synchronized(this.sentCounter)
 							{
-								System.out.println("Connected");
-								k.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+								this.sentCounter++;
 							}
 						}
-						else
+						if (k.isReadable())
 						{
-							if(k.isWritable())
+							System.out.println("Reading");
+							ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
+							
+							while(readBuffer.hasRemaining())
+								this.selChannel.read(readBuffer);
+							
+							readBuffer.flip();
+							
+							String hashString = Hasher.convHashToString(readBuffer);
+							// Iterate on hashRecords and remove hashString
+							Iterator<String> hashes = hashRecords.iterator();
+							while(hashes.hasNext())
 							{
-								System.out.println("Writing");
-								ByteBuffer writeBuffer = this.payload.getData();
-								
-								while(writeBuffer.hasRemaining())
-									this.selChannel.write(writeBuffer);
-								
-								// Append the hash
-								this.hashRecords.add(this.payload.getHash());
-								
-								synchronized(this.sentCounter)
+								if(hashes.next().equals(hashString))
 								{
-									this.sentCounter++;
-								}
-							}
-							if (k.isReadable())
-							{
-								System.out.println("Reading");
-								ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
-								
-								while(readBuffer.hasRemaining())
-									this.selChannel.read(readBuffer);
-								
-								byte[] hash = new byte[Hasher.getHashLength()];
-								BigInteger hashInt = new BigInteger(1, hash);
-								String hashString = hashInt.toString(16);
-								
-								// Iterate on hashRecords and remove hashString
-								Iterator<String> r = hashRecords.iterator();
-								while(r.hasNext())
-								{
-									if(r.next().equals(hashString))
+									hashes.remove();
+									
+									synchronized(this.receivedCounter)
 									{
-										r.remove();
-										break;
+										this.receivedCounter++;
 									}
-								}
-								
-								synchronized(this.receivedCounter)
-								{
-									this.receivedCounter++;
+									
+									break;
 								}
 							}
 						}
@@ -176,7 +176,7 @@ public class Client implements Runnable {
 				System.exit(0);
 			}
 			
-			// Sleep for some time
+			// Sleep for some time according to messageRate
 			try
 			{
 				Thread.sleep(1000/this.messageRate);

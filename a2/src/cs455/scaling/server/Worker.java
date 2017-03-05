@@ -16,9 +16,6 @@ class Worker implements Runnable {
 	
 	private ThreadPoolManager manager;
 	
-	// Local read buffer for reading data from a channel
-	private ByteBuffer readBuffer = ByteBuffer.allocate(8192);
-	
 	private String threadName;
 	
 	public Worker(ThreadPoolManager manager)
@@ -37,7 +34,7 @@ class Worker implements Runnable {
 		SelectionKey selKey = currentWork.getSelectionKey();
 		SocketChannel selChannel = (SocketChannel) selKey.channel();
 		
-		readBuffer.clear();
+		ByteBuffer readBuffer = ByteBuffer.allocate(8192);
 		
 		int readCount;
 		while(readBuffer.hasRemaining())
@@ -51,7 +48,8 @@ class Worker implements Runnable {
 				return;
 			}
 		}
-		
+
+		readBuffer.flip();
 		Server.getInstance().addWork(new HashWork(selKey, readBuffer));
 	}
 	
@@ -78,8 +76,7 @@ class Worker implements Runnable {
 		
 		HashWork hw = (HashWork) currentWork;
 		
-		Hasher hasher = new Hasher();
-		ByteBuffer hash = hasher.hash(hw.getData());
+		ByteBuffer hash = Hasher.hash(hw.getData());
 		
 		Server.getInstance().addWork(new WriteWork(selKey, hash));
 	}
@@ -98,6 +95,8 @@ class Worker implements Runnable {
 				break;
 				case HASH: System.out.println(threadName + " hashing");
 				break;
+				default:
+					break;
 				}
 				
 			}

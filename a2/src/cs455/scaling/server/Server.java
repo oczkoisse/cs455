@@ -12,16 +12,14 @@ public class Server implements Runnable {
 
 	private static int portnum;
 	private static int poolSize;
-	
-	private ArrayList<Work> pendingWorks = new ArrayList<Work>();
-	private HashMap<SelectionKey, ByteBuffer> pendingWrites = new HashMap<SelectionKey, ByteBuffer>();
 	private ThreadPoolManager tpm;
-	
 	private static Server serverInstance;
-	
 	private static ServerSocketChannel serverChannel;
 	private static Selector selector;
 	
+	
+	private ArrayList<Work> pendingWorks = new ArrayList<Work>();
+	private HashMap<SelectionKey, ByteBuffer> pendingWrites = new HashMap<SelectionKey, ByteBuffer>();
 	
 	private volatile int activeConnections;
 	private Integer messagesProcessed;
@@ -99,6 +97,7 @@ public class Server implements Runnable {
 		synchronized(pendingWorks)
 		{
 			pendingWorks.add(w);
+			System.out.println("Pending works count: " + pendingWorks.size());
 		}
 		Server.selector.wakeup();
 	}
@@ -115,22 +114,15 @@ public class Server implements Runnable {
 				switch(w.getType())
 				{
 				case READ: 
-					synchronized(messagesProcessed)
-					{
-						messagesProcessed++;
-					}
 					w.getSelectionKey().interestOps(SelectionKey.OP_READ);
 					break;
 				case WRITE:
-					w.getSelectionKey().interestOps(SelectionKey.OP_WRITE);
 					pendingWrites.put(w.getSelectionKey(), ((WriteWork) w).getData());
 					break;
 				case HASH: 
 					tpm.addWork(w);
 					break;
 				case DEREGISTER: 
-					w.getSelectionKey().cancel();
-					
 					try
 					{
 						w.getSelectionKey().channel().close();
@@ -140,6 +132,7 @@ public class Server implements Runnable {
 						System.out.println(e.getMessage());
 						System.exit(0);
 					}
+					w.getSelectionKey().cancel();
 					break;
 				}
 				
@@ -191,18 +184,21 @@ public class Server implements Runnable {
 								activeConnections++;
 							}
 						}
-						else if(selKey.isReadable())
+						else 
 						{
-							tpm.addWork(new ReadWork(selKey));
-							selectedKeys.remove();
-						}
-						else if(selKey.isWritable())
-						{
-							if(pendingWrites.containsKey(selKey))
+							if(selKey.isReadable())
 							{
-								tpm.addWork(new WriteWork(selKey, pendingWrites.get(selKey)));
-								pendingWrites.remove(selKey);
+								tpm.addWork(new ReadWork(selKey));
 								selectedKeys.remove();
+							}
+							if(selKey.isWritable())
+							{
+								if(pendingWrites.containsKey(selKey))
+								{
+									tpm.addWork(new WriteWork(selKey, pendingWrites.get(selKey)));
+									pendingWrites.remove(selKey);
+									selectedKeys.remove();
+								}
 							}
 						}
 					}
