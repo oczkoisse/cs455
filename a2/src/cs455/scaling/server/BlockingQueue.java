@@ -11,18 +11,13 @@ class BlockingQueue<T> {
 		q = new ArrayDeque<T>();
 	}
 	
-	public boolean enqueue(T elem)
+	public void enqueue(T elem)
 	{
-		boolean success = false;
 		synchronized(q)
 		{
-			success = q.offer(elem);
-			if (success)
-			{
-				q.notify();
-			}
+			q.addLast(elem);
+			q.notify();
 		}
-		return success;
 	}
 	
 	public T dequeue()
@@ -40,7 +35,7 @@ class BlockingQueue<T> {
 					break;
 				}
 			}
-			return q.poll();
+			return q.removeFirst();
 		}
 	}
 
