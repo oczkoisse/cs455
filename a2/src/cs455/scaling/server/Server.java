@@ -19,7 +19,7 @@ public class Server implements Runnable {
 	
 	
 	private ArrayList<Work> pendingWorks = new ArrayList<Work>();
-	private HashMap<SelectionKey, ByteBuffer> pendingWrites = new HashMap<SelectionKey, ByteBuffer>();
+	private HashMap<SelectionKey, ArrayList<ByteBuffer>> pendingWrites = new HashMap<SelectionKey, ArrayList<ByteBuffer>>();
 	
 	private volatile int activeConnections;
 	private Integer messagesProcessed;
@@ -97,9 +97,16 @@ public class Server implements Runnable {
 		synchronized(pendingWorks)
 		{
 			pendingWorks.add(w);
-			System.out.println("Pending works count: " + pendingWorks.size());
 		}
 		Server.selector.wakeup();
+	}
+	
+	void notifyMessageProcessed()
+	{
+		synchronized(messagesProcessed)
+		{
+			messagesProcessed++;
+		}
 	}
 	
 	private void completePendingWorks()
@@ -113,11 +120,18 @@ public class Server implements Runnable {
 				
 				switch(w.getType())
 				{
-				case READ: 
-					w.getSelectionKey().interestOps(SelectionKey.OP_READ);
-					break;
 				case WRITE:
-					pendingWrites.put(w.getSelectionKey(), ((WriteWork) w).getData());
+					w.getSelectionKey().interestOps(SelectionKey.OP_WRITE);
+					if (pendingWrites.containsKey(w.getSelectionKey()))
+					{
+						pendingWrites.get(w.getSelectionKey()).add(((WriteWork) w).getData());
+					}
+					else
+					{
+						ArrayList<ByteBuffer> t = new ArrayList<ByteBuffer>();
+						t.add(((WriteWork) w).getData());
+						pendingWrites.put(w.getSelectionKey(), t);
+					}
 					break;
 				case HASH: 
 					tpm.addWork(w);
@@ -133,6 +147,9 @@ public class Server implements Runnable {
 						System.exit(0);
 					}
 					w.getSelectionKey().cancel();
+					break;
+				default:
+					System.out.println("Rogue work detected");
 					break;
 				}
 				
@@ -184,7 +201,7 @@ public class Server implements Runnable {
 								activeConnections++;
 							}
 						}
-						else 
+						else
 						{
 							if(selKey.isReadable())
 							{
@@ -195,12 +212,16 @@ public class Server implements Runnable {
 							{
 								if(pendingWrites.containsKey(selKey))
 								{
-									tpm.addWork(new WriteWork(selKey, pendingWrites.get(selKey)));
+									for(ByteBuffer b: pendingWrites.get(selKey))
+									{
+										tpm.addWork(new WriteWork(selKey, b));
+									}
 									pendingWrites.remove(selKey);
 									selectedKeys.remove();
 								}
 							}
 						}
+						
 					}
 				}
 			}

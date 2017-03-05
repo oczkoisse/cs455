@@ -121,22 +121,6 @@ public class Client implements Runnable {
 					}
 					else
 					{
-						if(k.isWritable())
-						{
-							System.out.println("Writing");
-							ByteBuffer writeBuffer = this.payload.getData();
-							
-							while(writeBuffer.hasRemaining())
-								this.selChannel.write(writeBuffer);
-							
-							// Append the hash
-							this.hashRecords.add(this.payload.getHashString());
-							
-							synchronized(this.sentCounter)
-							{
-								this.sentCounter++;
-							}
-						}
 						if (k.isReadable())
 						{
 							System.out.println("Reading");
@@ -163,6 +147,22 @@ public class Client implements Runnable {
 									
 									break;
 								}
+							}
+						}
+						if(k.isWritable())
+						{
+							System.out.println("Writing");
+							ByteBuffer writeBuffer = this.payload.getData();
+							
+							while(writeBuffer.hasRemaining())
+								this.selChannel.write(writeBuffer);
+							
+							// Append the hash
+							this.hashRecords.add(this.payload.getHashString());
+							
+							synchronized(this.sentCounter)
+							{
+								this.sentCounter++;
 							}
 						}
 					}
