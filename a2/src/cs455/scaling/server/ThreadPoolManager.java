@@ -33,9 +33,9 @@ class ThreadPoolManager implements Runnable {
 		}
 	}
 	
-	public void signalDone(Worker w)
+	void signalDone(Worker wkr)
 	{
-		availableWorkers.enqueue(w);
+		availableWorkers.enqueue(wkr);
 	}
 	
 	public void addWork(Work w)

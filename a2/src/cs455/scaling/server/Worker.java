@@ -31,6 +31,8 @@ class Worker implements Runnable {
 	
 	private void handleRead() throws IOException
 	{
+		//System.out.println(threadName + " reading");
+		
 		SelectionKey selKey = currentWork.getSelectionKey();
 		SocketChannel selChannel = (SocketChannel) selKey.channel();
 		
@@ -55,23 +57,23 @@ class Worker implements Runnable {
 	
 	private void handleWrite() throws IOException
 	{
-		SelectionKey selKey = currentWork.getSelectionKey();
-		SocketChannel selChannel = (SocketChannel) selKey.channel();
+		System.out.println(threadName + " writing");
 		
-		WriteWork ww = (WriteWork) currentWork;
+		SocketChannel selChannel = (SocketChannel) currentWork.getSelectionKey().channel();
 		
-		ByteBuffer writeBuffer = ww.getData();
+		ByteBuffer writeBuffer = ((WriteWork) currentWork).getData();
 		
 		while(writeBuffer.hasRemaining())
-			selChannel.write(writeBuffer);
+			selChannel.write(writeBuffer);	
 		
-		// Post ReadWork
-		Server.getInstance().addWork(new ReadWork(selKey));
+		Server.getInstance().notifyMessageProcessed();
 	}
 	
 	
 	private void handleHash()
 	{
+		System.out.println(threadName + " hashing");
+		
 		SelectionKey selKey = currentWork.getSelectionKey();
 		
 		HashWork hw = (HashWork) currentWork;
@@ -83,42 +85,21 @@ class Worker implements Runnable {
 	
 	private void finishWork() throws IOException
 	{
-		synchronized(currentWorkLock)
+		switch(currentWork.getType())
 		{
-			synchronized(System.out)
-			{
-				switch(currentWork.getType())
-				{
-				case READ: System.out.println(threadName + " reading");
-				break;
-				case WRITE: System.out.println(threadName + " writing");
-				break;
-				case HASH: System.out.println(threadName + " hashing");
-				break;
-				default:
-					break;
-				}
-				
-			}
-			
-			switch(currentWork.getType())
-			{
-			case READ:
-				handleRead();
-				break;
-			case WRITE: 
-				handleWrite();
-				break;
-			case HASH: 
-				handleHash();
-				break;
-			default:
-				System.out.println("Unrecognized work type");
-				System.exit(0);
-			}
+		case READ:
+			handleRead();
+			break;
+		case WRITE: 
+			handleWrite();
+			break;
+		case HASH: 
+			handleHash();
+			break;
+		default:
+			System.out.println("Rogue work type");
+			System.exit(0);
 		}
-		
-		manager.signalDone(this);
 	}
 
 	@Override
@@ -154,6 +135,8 @@ class Worker implements Runnable {
 				}
 				currentWork = null;
 				idle = true;
+				
+				manager.signalDone(this);
 			}
 		}
 	}
