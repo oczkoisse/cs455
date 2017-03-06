@@ -223,6 +223,7 @@ public class Server implements Runnable {
 						System.exit(0);
 					}
 					w.getSelectionKey().cancel();
+					activeConnections--;
 					break;
 				default:
 					System.out.println("Rogue work detected");

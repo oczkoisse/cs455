@@ -126,22 +126,30 @@ class Worker implements Runnable {
 	 * Identifies the type of work, and dispatches it to the relevant method
 	 * @throws IOException
 	 */
-	private void finishWork() throws IOException
+	private void finishWork()
 	{
-		switch(currentWork.getType())
+		try
 		{
-		case READ:
-			handleRead();
-			break;
-		case WRITE: 
-			handleWrite();
-			break;
-		case HASH: 
-			handleHash();
-			break;
-		default:
-			System.out.println("Rogue work type");
-			System.exit(0);
+			switch(currentWork.getType())
+			{
+			case READ:
+				handleRead();
+				break;
+			case WRITE: 
+				handleWrite();
+				break;
+			case HASH: 
+				handleHash();
+				break;
+			default:
+				System.out.println("Unknown work type");
+				System.exit(0);
+			}
+		}
+		catch(IOException e)
+		{
+			Server.getInstance().addWork(new DeregisterWork(currentWork.getSelectionKey()));
+			return;
 		}
 	}
 
@@ -172,15 +180,9 @@ class Worker implements Runnable {
 					}
 				}
 				idle = false;
-				try
-				{
-					finishWork();
-				}
-				catch(IOException e)
-				{
-					System.out.println(e.getMessage());
-					System.exit(0);
-				}
+				
+				finishWork();
+				
 				currentWork = null;
 				idle = true;
 				
