@@ -179,7 +179,7 @@ public class Client implements Runnable {
 					{
 						if (k.isReadable())
 						{
-							System.out.println("Reading");
+							// System.out.println("Reading");
 							ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
 							
 							while(readBuffer.hasRemaining())
@@ -209,7 +209,7 @@ public class Client implements Runnable {
 						}
 						if(k.isWritable())
 						{
-							System.out.println("Writing");
+							// System.out.println("Writing");
 							ByteBuffer writeBuffer = this.payload.getData();
 							
 							while(writeBuffer.hasRemaining())

@@ -94,7 +94,7 @@ class Worker implements Runnable {
 	 */
 	private void handleWrite() throws IOException
 	{
-		System.out.println(threadName + " writing");
+		// System.out.println(threadName + " writing");
 		
 		SocketChannel selChannel = (SocketChannel) currentWork.getSelectionKey().channel();
 		
@@ -111,7 +111,7 @@ class Worker implements Runnable {
 	 */
 	private void handleHash()
 	{
-		System.out.println(threadName + " hashing");
+		// System.out.println(threadName + " hashing");
 		
 		SelectionKey selKey = currentWork.getSelectionKey();
 		
