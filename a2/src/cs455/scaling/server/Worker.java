@@ -8,16 +8,44 @@ import java.nio.channels.*;
 import cs455.scaling.works.*;
 import cs455.scaling.util.Hasher;
 
+/**
+ * Worker thread that does jobs allocated by the {@link cs455.scaling.server.ThreadPoolManager}
+ * @author rahul
+ *
+ */
 class Worker implements Runnable {
 	
+	/**
+	 * The most current work that needs to be done
+	 * If null, then this worker is free.
+	 */
 	private Work currentWork;
+	
+	/**
+	 * Lock to be used for synchronizing on {@link #currentWork}
+	 */
 	private final Object currentWorkLock;
+	
+	/**
+	 * Status of the worker
+	 */
 	private volatile boolean idle;
 	
+	/**
+	 * Parent thread pool manager which manages this worker thread
+	 */
 	private ThreadPoolManager manager;
 	
+	/**
+	 * The name of this worker thread
+	 */
 	private String threadName;
 	
+	/**
+	 * Instantiates a new worker thread, marks it as idle but does not start it.
+	 * The initial name is 'Unknown', which changes to the name of the thread in which this worker thread runs.
+	 * @param manager	the parent {@link cs455.scaling.server.ThreadPoolManager} instance
+	 */
 	public Worker(ThreadPoolManager manager)
 	{
 		this.manager = manager;
@@ -30,7 +58,10 @@ class Worker implements Runnable {
 	}
 	
 
-	
+	/**
+	 * Handles a read operation requested by the parent {@link cs455.scaling.server.ThreadPoolManager} instance
+	 * @throws IOException
+	 */
 	private void handleRead() throws IOException
 	{
 		//System.out.println(threadName + " reading");
@@ -57,6 +88,10 @@ class Worker implements Runnable {
 		Server.getInstance().addWork(new HashWork(selKey, readBuffer));
 	}
 	
+	/**
+	 * Handles a write operation requested by the parent {@link cs455.scaling.server.ThreadPoolManager} instance
+	 * @throws IOException
+	 */
 	private void handleWrite() throws IOException
 	{
 		System.out.println(threadName + " writing");
@@ -71,7 +106,9 @@ class Worker implements Runnable {
 		Server.getInstance().notifyMessageProcessed();
 	}
 	
-	
+	/**
+	 * Handles a hash operation requested by the parent {@link cs455.scaling.server.ThreadPoolManager} instance
+	 */
 	private void handleHash()
 	{
 		System.out.println(threadName + " hashing");
@@ -85,6 +122,10 @@ class Worker implements Runnable {
 		Server.getInstance().addWork(new WriteWork(selKey, hash));
 	}
 	
+	/**
+	 * Identifies the type of work, and dispatches it to the relevant method
+	 * @throws IOException
+	 */
 	private void finishWork() throws IOException
 	{
 		switch(currentWork.getType())
@@ -104,6 +145,11 @@ class Worker implements Runnable {
 		}
 	}
 
+	/**
+	 * Begins by instantiating its name using the thread's name
+	 * Waits until a work is allocated. After finishing the allocated work,
+	 * signals the parent thread pool manager of availability.
+	 */
 	@Override
 	public void run()
 	{
@@ -143,6 +189,10 @@ class Worker implements Runnable {
 		}
 	}
 	
+	/**
+	 * Allocates a work to this worker thread
+	 * @param w
+	 */
 	public void setWork(Work w)
 	{
 		synchronized(currentWorkLock)
@@ -152,11 +202,19 @@ class Worker implements Runnable {
 		}
 	}
 	
+	/**
+	 * Returns a string representation of the worker thread
+	 * which is its name
+	 */
 	public String toString()
 	{
 		return threadName;
 	}
 	
+	/**
+	 * Get the status of the worker
+	 * @return	true if idle otherwise false
+	 */
 	public boolean getStatus()
 	{
 		return idle;
