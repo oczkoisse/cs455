@@ -10,20 +10,65 @@ import java.util.*;
 
 public class Server implements Runnable {
 
+	/**
+	 *  The port number at which to listen for communications
+	 */
 	private static int portnum;
+	
+	/**
+	 * The size of the thread pool to be used
+	 */
 	private static int poolSize;
-	private ThreadPoolManager tpm;
+	
+	/**
+	 * Internal reference to the corresponding Thread Pool Manager
+	 */
+	private final ThreadPoolManager tpm;
+	
+	/**
+	 * Single instance of the server
+	 */
 	private static Server serverInstance;
+	
+	/**
+	 * The channel at which to listen for new communications
+	 */
 	private static ServerSocketChannel serverChannel;
+	
+	/**
+	 * One and only selector for handling all client connections
+	 */
 	private static Selector selector;
 	
 	
+	/**
+	 * A list of works  that need to be done
+	 */
 	private ArrayList<Work> pendingWorks = new ArrayList<Work>();
+	
+	/**
+	 * A list of pending writes as sifted from the pending works.
+	 * Note that each selection key could have more than one pending writes.
+	 */
 	private HashMap<SelectionKey, ArrayList<ByteBuffer>> pendingWrites = new HashMap<SelectionKey, ArrayList<ByteBuffer>>();
 	
+	/**
+	 * The number of active connections being served by the server
+	 */
 	private volatile int activeConnections;
+	
+	/**
+	 * Number of messages processed since last summary printing
+	 */
 	private Integer messagesProcessed;
 	
+	/**
+	 * Instantiates the Server singleton.
+	 * Accepts connections on ANY interface.
+	 * 
+	 * @param portnum	the port number to use for accepting connections
+	 * @param poolSize	the thread pool size to be used for managing communications
+	 */
 	private Server(int portnum, int poolSize)
 	{
 		Server.portnum = portnum;
@@ -34,6 +79,12 @@ public class Server implements Runnable {
 		this.messagesProcessed = 0;
 	}
 	
+	/**
+	 * A TimerTask implementation to be used with Timer.
+	 * Prints summary of server communications in the form of:
+	 * [time stamp] Current Server Throughput: x messages/s Active Client Connections: y 
+	 * 
+	 */
 	private class Summary extends TimerTask
 	{
 		public void run()
@@ -55,6 +106,13 @@ public class Server implements Runnable {
 		}
 	}
 	
+	/**
+	 * Initializes the Server singleton.
+	 * The server so initialized accepts connections at ANY interface.
+	 * 
+	 * @param portnum	the port number at which to listen for incoming connections
+	 * @param poolSize	the size of thread pool used for managing communications
+	 */
 	public static void init(int portnum, int poolSize)
 	{
 		if(serverInstance == null)
@@ -82,6 +140,11 @@ public class Server implements Runnable {
 			throw new IllegalStateException("Repeated initialization");
 	}
 	
+	/**
+	 * Gets the server instance that was previously initialized using {@link cs455.scaling.server.Server#init(int, int)}
+	 * 
+	 * @return	the server instance
+	 */
 	public static Server getInstance()
 	{
 		if(serverInstance != null)
@@ -92,6 +155,13 @@ public class Server implements Runnable {
 			throw new IllegalStateException("Server instance is not initialized");
 	}
 	
+	/**
+	 * Add a work to server's to-do list
+	 * Immediately wakes up the server if listening for communications,
+	 * so that it can get to the just added work
+	 * 
+	 * @param w	work to be done
+	 */
 	public void addWork(Work w)
 	{
 		synchronized(pendingWorks)
@@ -101,6 +171,12 @@ public class Server implements Runnable {
 		Server.selector.wakeup();
 	}
 	
+	/**
+	 * Notifies the server that a message was successfully processed.
+	 * This has the side effect of incrementing the counter for processed 
+	 * messages. A message is defined to be processed when it's hash is 
+	 * completely written to the respective client
+	 */
 	void notifyMessageProcessed()
 	{
 		synchronized(messagesProcessed)
@@ -158,6 +234,13 @@ public class Server implements Runnable {
 		}
 	}
 	
+	/**
+	 * Server logic for incoming connections.
+	 * Starts the associated thread pool manager, and
+	 * schedules the printing of summary every 5 seconds.
+	 * All the underlying read/write/hash work is dispatched to the
+	 * associated thread pool manager.
+	 */
 	public void run()
 	{
 		new Thread(this.tpm).start();
@@ -170,7 +253,6 @@ public class Server implements Runnable {
 			// apply updates
 			completePendingWorks();
 			
-			// call select
 			try
 			{
 				Server.selector.select();
@@ -250,6 +332,7 @@ public class Server implements Runnable {
 			}
 			catch(NumberFormatException e)
 			{
+				System.out.println("Integer arguments expected");
 				System.out.println("Usage: cs455.scaling.server.Server <portnum> <thread-pool-size");
 				System.exit(0);
 			}

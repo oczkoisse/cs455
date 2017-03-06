@@ -217,6 +217,7 @@ public class Client implements Runnable {
 			}
 			catch(NumberFormatException e)
 			{
+				System.out.println("Integer arguments expected");
 				System.out.println("Usage: cs455.scaling.client.Client <server-name> <server-port> <message-rate>");
 				System.exit(0);
 			}
