@@ -197,8 +197,22 @@ class Worker implements Runnable {
 	{
 		synchronized(currentWorkLock)
 		{
-			this.currentWork = w;
-			this.currentWorkLock.notify();
+			if (w==null)
+			{
+				throw new IllegalStateException("Attempt to deallocate work from a busy thread");
+			}
+			else
+			{
+				if (this.currentWork == null)
+				{
+					this.currentWork = w;
+					this.currentWorkLock.notify();
+				}
+				else
+				{
+					throw new IllegalStateException("Attempt to allocate work to a busy thread");
+				}
+			}
 		}
 	}
 	
