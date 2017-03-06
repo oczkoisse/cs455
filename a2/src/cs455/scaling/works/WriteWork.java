@@ -9,16 +9,16 @@ public class WriteWork extends Work {
 	
 	public WriteWork(SelectionKey key, ByteBuffer data)
 	{
-		super(key);
+		super(key, WorkType.WRITE);
 		this.data = data.asReadOnlyBuffer();
-	}
-
-	@Override
-	public WorkType getType() {
-		return WorkType.WRITE;
 	}
 
 	public ByteBuffer getData() {
 		return this.data;
+	}
+	
+	public String toString()
+	{
+		return "Write work with data size " + data.remaining();
 	}
 }

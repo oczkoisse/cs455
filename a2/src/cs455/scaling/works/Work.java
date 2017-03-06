@@ -4,19 +4,26 @@ import java.nio.channels.SelectionKey;
 
 public abstract class Work {
 
-	private SelectionKey key;
+	private final SelectionKey key;
+	private final WorkType wtype;
 	
-	public Work(SelectionKey key)
+	public Work(SelectionKey key, WorkType wtype)
 	{
 		this.key = key;
+		this.wtype = wtype;
 	}
 	
-	public SelectionKey getSelectionKey()
+	public final SelectionKey getSelectionKey()
 	{
 		return key;
 	}
 
-	public abstract WorkType getType();
+	public final WorkType getType()
+	{
+		return wtype;
+	}
+	
+	public abstract String toString();
 
 }
 

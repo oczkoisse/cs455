@@ -16,6 +16,7 @@ class BlockingQueue<T> {
 		synchronized(q)
 		{
 			q.addLast(elem);
+			//printContents();
 			q.notify();
 		}
 	}
@@ -35,7 +36,24 @@ class BlockingQueue<T> {
 					break;
 				}
 			}
-			return q.removeFirst();
+			T r = q.removeFirst();
+			//printContents();
+			return r;
+		}
+	}
+	
+	public void printContents()
+	{
+		synchronized(q)
+		{
+			synchronized(System.out)
+			{
+				for(T e: q)
+				{
+					System.out.print(e + " - ");
+				}
+				System.out.println();
+			}
 		}
 	}
 

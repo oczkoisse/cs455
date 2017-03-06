@@ -80,15 +80,16 @@ public class Client implements Runnable {
 	
 	public void run()
 	{
+		// Timer for printing summary
 		Timer t = new Timer();
 		t.scheduleAtFixedRate(new Summary(), new Date(), 10000);
-		
+
 		this.payload = new Payload(8, Payload.Unit.K_BYTES);
 		
 		while(true)
 		{
 			// Send the payload or receive the hash
-			
+			long start = System.nanoTime();
 			try
 			{
 				this.selector.select();
@@ -115,8 +116,8 @@ public class Client implements Runnable {
 						boolean success = ((SocketChannel) k.channel()).finishConnect();
 						if(success)
 						{
-							System.out.println("Connected");
-							k.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+							// System.out.println("Connected");
+							k.interestOps(SelectionKey.OP_WRITE);
 						}
 					}
 					else
@@ -148,6 +149,8 @@ public class Client implements Runnable {
 									break;
 								}
 							}
+							
+							k.interestOps(SelectionKey.OP_WRITE);
 						}
 						if(k.isWritable())
 						{
@@ -164,6 +167,7 @@ public class Client implements Runnable {
 							{
 								this.sentCounter++;
 							}
+							k.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 						}
 					}
 					
@@ -176,10 +180,16 @@ public class Client implements Runnable {
 				System.exit(0);
 			}
 			
+			long end = System.nanoTime();
+			
+			long timeToSleep = (1000/this.messageRate) - ((end-start) / 1000000);
+			
+			timeToSleep = timeToSleep > 0 ? timeToSleep : 0;
 			// Sleep for some time according to messageRate
+			// System.out.println("Sleeping for " + timeToSleep);
 			try
 			{
-				Thread.sleep(1000/this.messageRate);
+				Thread.sleep(timeToSleep);
 			}
 			catch(InterruptedException e)
 			{

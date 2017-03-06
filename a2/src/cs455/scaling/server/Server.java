@@ -201,24 +201,23 @@ public class Server implements Runnable {
 								activeConnections++;
 							}
 						}
-						else
+						else if(selKey.isReadable())
 						{
-							if(selKey.isReadable())
+							tpm.addWork(new ReadWork(selKey));
+							selKey.interestOps(SelectionKey.OP_WRITE);
+							selectedKeys.remove();
+						}
+						else if(selKey.isWritable())
+						{
+							if(pendingWrites.containsKey(selKey))
 							{
-								tpm.addWork(new ReadWork(selKey));
-								selectedKeys.remove();
-							}
-							if(selKey.isWritable())
-							{
-								if(pendingWrites.containsKey(selKey))
+								for(ByteBuffer b: pendingWrites.get(selKey))
 								{
-									for(ByteBuffer b: pendingWrites.get(selKey))
-									{
-										tpm.addWork(new WriteWork(selKey, b));
-									}
-									pendingWrites.remove(selKey);
-									selectedKeys.remove();
+									tpm.addWork(new WriteWork(selKey, b));
 								}
+								pendingWrites.remove(selKey);
+								selKey.interestOps(SelectionKey.OP_READ);
+								selectedKeys.remove();
 							}
 						}
 						

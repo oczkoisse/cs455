@@ -6,12 +6,13 @@ public class ReadWork extends Work {
 		
 	public ReadWork(SelectionKey key)
 	{
-		super(key);
+		super(key, WorkType.READ);
 	}
 
-	@Override
-	public WorkType getType() {
-		return WorkType.READ;
+	
+	public String toString()
+	{
+		return "Read work";
 	}
 
 }

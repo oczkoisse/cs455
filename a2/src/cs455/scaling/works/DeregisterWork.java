@@ -6,13 +6,11 @@ public class DeregisterWork extends Work {
 
 	public DeregisterWork(SelectionKey key)
 	{
-		super(key);
-	}
-	
-	@Override
-	public WorkType getType() {
-		// TODO Auto-generated method stub
-		return WorkType.DEREGISTER;
+		super(key, WorkType.DEREGISTER);
 	}
 
+	public String toString()
+	{
+		return "Deregister work for " + super.getSelectionKey().channel().toString();
+	}
 }

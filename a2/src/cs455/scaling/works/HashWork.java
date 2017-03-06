@@ -9,16 +9,16 @@ public class HashWork extends Work {
 	
 	public HashWork(SelectionKey key, ByteBuffer data)
 	{
-		super(key);
+		super(key, WorkType.HASH);
 		this.data = data.asReadOnlyBuffer();
-	}
-
-	@Override
-	public WorkType getType() {
-		return WorkType.HASH;
 	}
 
 	public ByteBuffer getData() {
 		return this.data;
+	}
+	
+	public String toString()
+	{
+		return "Hash work with data size " + data.remaining();
 	}
 }

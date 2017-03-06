@@ -29,6 +29,8 @@ class Worker implements Runnable {
 		this.threadName = "Unknown";
 	}
 	
+
+	
 	private void handleRead() throws IOException
 	{
 		//System.out.println(threadName + " reading");
@@ -148,6 +150,11 @@ class Worker implements Runnable {
 			this.currentWork = w;
 			this.currentWorkLock.notify();
 		}
+	}
+	
+	public String toString()
+	{
+		return threadName;
 	}
 	
 	public boolean getStatus()
