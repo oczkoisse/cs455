@@ -8,7 +8,13 @@ import java.nio.channels.*;
 
 import cs455.scaling.util.Hasher;
 
-
+/**
+ * Client that sends random fixed-size messages to the server at {@link this#serverName}:{@link this#serverPort}
+ * while also receiving their hashes, which it matches against its own copy to ascertain that a message was sent successfully.
+ * This class can be run in its own thread.
+ * @author Rahul Bangar
+ *
+ */
 public class Client implements Runnable {
 	
 	/**
