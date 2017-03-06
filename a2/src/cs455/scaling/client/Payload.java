@@ -2,7 +2,6 @@ package cs455.scaling.client;
 
 import java.util.*;
 import java.nio.ByteBuffer;
-import java.security.*;
 
 import cs455.scaling.util.Hasher;
 

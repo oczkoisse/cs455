@@ -1,7 +1,6 @@
 package cs455.scaling.client;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.*;
 import java.util.*;
 
