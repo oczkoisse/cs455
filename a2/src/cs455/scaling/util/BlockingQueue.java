@@ -9,7 +9,7 @@ import java.util.*;
  *
  * @param <T>	the type of the elements to be stored in the queue
  */
-class BlockingQueue<T> {
+public class BlockingQueue<T> {
 	
 	/**
 	 * Internal dequeue that does not have blocking capability
