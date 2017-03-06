@@ -1,5 +1,6 @@
 package cs455.scaling.server;
 
+import cs455.scaling.util.BlockingQueue;
 import cs455.scaling.works.*;
 
 class ThreadPoolManager implements Runnable {
