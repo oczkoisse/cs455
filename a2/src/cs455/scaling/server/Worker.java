@@ -34,7 +34,7 @@ class Worker implements Runnable {
 	/**
 	 * Parent thread pool manager which manages this worker thread
 	 */
-	private ThreadPoolManager manager;
+	private final ThreadPoolManager manager;
 	
 	/**
 	 * The name of this worker thread
