@@ -8,6 +8,16 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.*;
 
+/**
+ * Server that accepts clients to receive fixed-size messages at a fixed rate,
+ * hashes those messages, and sends the hashes back to the clients as acknowledgement
+ * It does so by employing a thread pool to manage read/hash/write operations
+ * while relying on java non-blocking i/o to handle multiple clients in a single thread.
+ * Server can be run in its own thread.
+ * 
+ * @author Rahul Bangar
+ *
+ */
 public class Server implements Runnable {
 
 	/**

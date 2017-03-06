@@ -10,7 +10,7 @@ import cs455.scaling.util.Hasher;
 
 /**
  * Worker thread that does jobs allocated by the {@link cs455.scaling.server.ThreadPoolManager}
- * @author rahul
+ * @author Rahul Bangar
  *
  */
 class Worker implements Runnable {
