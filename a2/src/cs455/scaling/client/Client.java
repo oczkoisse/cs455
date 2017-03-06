@@ -183,7 +183,7 @@ public class Client implements Runnable {
 							ByteBuffer readBuffer = ByteBuffer.allocate(Hasher.getHashLength());
 							
 							while(readBuffer.hasRemaining())
-								this.serverChanel.read(readBuffer);
+								this.serverChannel.read(readBuffer);
 							
 							readBuffer.flip();
 							
