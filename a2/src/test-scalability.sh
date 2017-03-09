@@ -20,14 +20,14 @@ How it works:
 - If you close a window/tab, associated java process will automatically gets killed.
 COMMENT
 
-CLASSES=$HOME/Documents/Assignments/cs455/HW1-PC/cs455/a2/src
+CLASSES=$HOME/new
 SCRIPT="cd $CLASSES;
 java -cp . cs455.scaling.client.Client lincoln.cs.colostate.edu 54321 4"
 
 #$1 is the command-line argument
 for ((j=1; j<=$1; j++));
 do
-	COMMAND='gnome-terminal'
+	COMMAND='dbus-launch gnome-terminal'
 	for i in `cat machine_list`
 	do
 		echo 'logging into '$i
