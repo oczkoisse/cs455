@@ -1,4 +1,4 @@
-package cs455.hadoop.census.jobs;
+package cs455.hadoop.census.jobs.marital;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -9,30 +9,30 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
 
-import cs455.hadoop.census.io.LongPair;
+import cs455.hadoop.census.io.LongTriple;
 import cs455.hadoop.census.io.DoublePair;
 
 
 /**
  * This is the main class. Hadoop will invoke the main method of this class.
  */
-public class TenureJob {
+public class MaritalJob {
     public static void main(String[] args) {
         try {
             Configuration conf = new Configuration();
             // Give the MapRed job a name. You'll see this name in the Yarn webapp.
-            Job job = Job.getInstance(conf, "q1");
+            Job job = Job.getInstance(conf, "q2");
             // Current class.
-            job.setJarByClass(TenureJob.class);
+            job.setJarByClass(MaritalJob.class);
             // Mapper
-            job.setMapperClass(TenureMapper.class);
+            job.setMapperClass(MaritalMapper.class);
             // Combiner.
-            job.setCombinerClass(TenureCombiner.class);
+            job.setCombinerClass(MaritalCombiner.class);
             // Reducer
-            job.setReducerClass(TenureReducer.class);
+            job.setReducerClass(MaritalReducer.class);
             // Outputs from the Mapper.
             job.setMapOutputKeyClass(Text.class);
-            job.setMapOutputValueClass(LongPair.class);
+            job.setMapOutputValueClass(LongTriple.class);
             // Outputs from Reducer. It is sufficient to set only the following two properties
             // if the Mapper and Reducer has same key and value types. It is set separately for
             // elaboration.

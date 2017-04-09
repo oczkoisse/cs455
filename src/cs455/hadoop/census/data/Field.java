@@ -12,7 +12,7 @@ public enum Field {
 	MALE(363, 9, Segment.ONE),
 	FEMALE(372, 9, Segment.ONE),
 	MALE_NEVER_MARRIED(4422, 9, Segment.ONE),
-	FEMALE_NEVER_MARRIED(4493, 9, Segment.ONE),
+	FEMALE_NEVER_MARRIED(4467, 9, Segment.ONE),
 	HOUSES_OWNED(1803, 9, Segment.TWO),
 	HOUSES_RENTED(1812, 9, Segment.TWO),
 	
