@@ -15,6 +15,10 @@ public enum Field {
 	FEMALE_NEVER_MARRIED(4467, 9, Segment.ONE),
 	HOUSES_OWNED(1803, 9, Segment.TWO),
 	HOUSES_RENTED(1812, 9, Segment.TWO),
+	HOUSES_URBAN_INSIDE(1821, 9, Segment.TWO),
+	HOUSES_URBAN_OUTSIDE(1830, 9, Segment.TWO),
+	HOUSES_RURAL(1839, 9, Segment.TWO),
+	HOUSES_OTHER(1848, 9, Segment.TWO),
 	
 	
 	AGE_GRP(795, 9, Segment.ONE, 31, FieldType.NUMERIC),
