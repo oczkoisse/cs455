@@ -3,25 +3,39 @@ package cs455.hadoop.census.jobs.rent;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SortedMapWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.HashMap;
 
-public class HouseRentReducer extends Reducer<Text, SortedMapWritable, Text, DoubleWritable> {
+public class HouseRentReducer extends Reducer<Text, SortedMapWritable, Text, Text> {
 	
-	// Lower and upper bounds indexed by instance number from 1 to 20
-	// For example, instance 1 has bounds groupBounds[0] and groupBounds[1]
-	// ... groupBounds[n-1] and groupBounds[n]
-	private static List<Double> groupBounds = Arrays.asList(0.5, 100.5, 149.5, 199.5, 249.5, 299.5, 349.5, 399.5, 449.5, 499.5,
-															549.5, 599.5, 649.5, 699.5, 749.5, 999.5, Double.MAX_VALUE);
+	private static HashMap<Integer, String> instanceToClass = new HashMap<Integer, String>();
+	
+	static {
+		instanceToClass.put(1, "Less than $100");
+		instanceToClass.put(2, "$100 - $149");
+		instanceToClass.put(3, "$150 - $199");
+		instanceToClass.put(4, "$200 - $249");
+		instanceToClass.put(5, "$250 - $299");
+		instanceToClass.put(6, "$300 - $349");
+		instanceToClass.put(7, "$350 - $399");
+		instanceToClass.put(8, "$400 - $449");
+		instanceToClass.put(9, "$450 - $499");
+		instanceToClass.put(10, "$500 - $549");
+		instanceToClass.put(11, "$550 - $599");
+		instanceToClass.put(12, "$600 - $649");
+		instanceToClass.put(13, "$650 - $699");
+		instanceToClass.put(10, "$700 - $749");
+		instanceToClass.put(11, "$750 - $999");
+		instanceToClass.put(12, "$1000 or more");
+		instanceToClass.put(13, "No Cash Rent");
+	}
     
 	private TreeMap<Integer, Long> combinedHouseRentsTable = new TreeMap<Integer, Long>();
 	
@@ -54,11 +68,11 @@ public class HouseRentReducer extends Reducer<Text, SortedMapWritable, Text, Dou
 			}
 		}
 		
-		double median = 0.0;
 		
 		// Calculate Median index
 		// Will compare it to instance bounds
-		double medianIndex = totalHouses / 2.0;
+		long medianIndex = totalHouses / 2L;
+		int median = 0;
 		long cumulativeHouseCount = 0,
 		     prevCumulativeHouseCount = 0;
 		
@@ -71,19 +85,16 @@ public class HouseRentReducer extends Reducer<Text, SortedMapWritable, Text, Dou
 			
 			cumulativeHouseCount += houseCount;
 			
-			double lInstance = groupBounds.get(instance - 1);
-			double hInstance = groupBounds.get(instance);
-			
 			if (prevCumulativeHouseCount <= medianIndex && medianIndex < cumulativeHouseCount)
 			{
 				// This is the median group
-				median = lInstance + (medianIndex - prevCumulativeHouseCount) * ((hInstance -lInstance) / houseCount);
+				median = instance;
 				break;
 			}
 			
 			prevCumulativeHouseCount = cumulativeHouseCount;
 		}
         
-        context.write(state, new DoubleWritable(median));
+        context.write(state, new Text(instanceToClass.get(median)));
     }
 }

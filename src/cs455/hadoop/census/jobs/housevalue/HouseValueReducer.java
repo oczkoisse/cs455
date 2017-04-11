@@ -11,19 +11,38 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-public class HouseValueReducer extends Reducer<Text, SortedMapWritable, Text, DoubleWritable> {
+public class HouseValueReducer extends Reducer<Text, SortedMapWritable, Text, Text> {
 	
-	// Lower and upper bounds indexed by instance number from 1 to 20
-	// For example, instance 1 has bounds groupBounds[0] and groupBounds[1]
-	// ... groupBounds[n-1] and groupBounds[n]
-	private static List<Double> groupBounds = Arrays.asList(0.5, 14999.5, 19999.5, 24999.5, 29999.5, 34999.5, 39999.5, 44999.5,
-															44999.5, 49999.5, 59999.5, 74999.5, 99999.5, 124999.5, 149999.5, 174999.5,
-															199999.5, 249999.5, 299999.5, 399999.5, 499999.5, Double.MAX_VALUE);
-    
+	private static HashMap<Integer, String> instanceToClass = new HashMap<Integer, String>();
+	
+	static {
+		instanceToClass.put(1, "Less than $15,000");
+		instanceToClass.put(2, "$15,000 - $19,999");
+		instanceToClass.put(3, "$20,000 - $24,999");
+		instanceToClass.put(4, "$25,000 - $29,999");
+		instanceToClass.put(5, "$30,000 - $34,999");
+		instanceToClass.put(6, "$35,000 - $39,999");
+		instanceToClass.put(7, "$40,000 - $44,999");
+		instanceToClass.put(8, "$45,000 - $49,999");
+		instanceToClass.put(9, "$50,000 - $59,999");
+		instanceToClass.put(10, "$60,000 - $74,999");
+		instanceToClass.put(11, "$75,000 - $99,999");
+		instanceToClass.put(12, "$100,000 - $124,999");
+		instanceToClass.put(13, "$125,000 - $149,999");
+		instanceToClass.put(14, "$150,000 - $174,999");
+		instanceToClass.put(15, "$175,000 - $199,999");
+		instanceToClass.put(16, "$200,000 - $249,999");
+		instanceToClass.put(17, "$250,000 - $299,999");
+		instanceToClass.put(18, "$300,000 - $399,999");
+		instanceToClass.put(19, "$400,000 - $499,999");
+		instanceToClass.put(20, "$500,000 or more");
+	}
+	
 	private TreeMap<Integer, Long> combinedHouseValuesTable = new TreeMap<Integer, Long>();
 	
 	@Override
@@ -55,11 +74,11 @@ public class HouseValueReducer extends Reducer<Text, SortedMapWritable, Text, Do
 			}
 		}
 		
-		double median = 0.0;
+		int median = 0;
 		
 		// Calculate Median index
 		// Will compare it to instance bounds
-		double medianIndex = totalHouses / 2.0;
+		long medianIndex = totalHouses / 2L;
 		long cumulativeHouseCount = 0,
 		     prevCumulativeHouseCount = 0;
 		
@@ -72,19 +91,16 @@ public class HouseValueReducer extends Reducer<Text, SortedMapWritable, Text, Do
 			
 			cumulativeHouseCount += houseCount;
 			
-			double lInstance = groupBounds.get(instance - 1);
-			double hInstance = groupBounds.get(instance);
-			
 			if (prevCumulativeHouseCount <= medianIndex && medianIndex < cumulativeHouseCount)
 			{
 				// This is the median group
-				median = lInstance + (medianIndex - prevCumulativeHouseCount) * ((hInstance -lInstance) / houseCount);
+				median = instance;
 				break;
 			}
 			
 			prevCumulativeHouseCount = cumulativeHouseCount;
 		}
         
-        context.write(state, new DoubleWritable(median));
+        context.write(state, new Text(instanceToClass.get(median)));
     }
 }

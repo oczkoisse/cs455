@@ -19,7 +19,6 @@ public enum Field {
 	HOUSES_URBAN_OUTSIDE(1830, 9, Segment.TWO),
 	HOUSES_RURAL(1839, 9, Segment.TWO),
 	HOUSES_OTHER(1848, 9, Segment.TWO),
-	HOUSES_NO_CASH_RENT(3594, 9, Segment.TWO),
 	
 	
 	AGE_GRP(795, 9, Segment.ONE, 31, FieldType.NUMERIC),
@@ -27,7 +26,7 @@ public enum Field {
 	FEMALE_HISP_AGE_GRP(4143, 9, Segment.ONE, 31, FieldType.NUMERIC),
 	HOUSE_ROOMS_GRP(2388, 9, Segment.TWO, 9, FieldType.NUMERIC),
 	HOUSE_VALUE_GRP(2928, 9, Segment.TWO, 20, FieldType.NUMERIC),
-	HOUSE_RENT_GRP(3450, 9, Segment.TWO, 16, FieldType.NUMERIC);
+	HOUSE_RENT_GRP(3450, 9, Segment.TWO, 17, FieldType.NUMERIC);
 	
 	private int start;
 	private int size;
