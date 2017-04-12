@@ -31,10 +31,9 @@ public class HouseRentReducer extends Reducer<Text, SortedMapWritable, Text, Tex
 		instanceToClass.put(11, "$550 - $599");
 		instanceToClass.put(12, "$600 - $649");
 		instanceToClass.put(13, "$650 - $699");
-		instanceToClass.put(10, "$700 - $749");
-		instanceToClass.put(11, "$750 - $999");
-		instanceToClass.put(12, "$1000 or more");
-		instanceToClass.put(13, "No Cash Rent");
+		instanceToClass.put(14, "$700 - $749");
+		instanceToClass.put(15, "$750 - $999");
+		instanceToClass.put(16, "$1000 or more");
 	}
     
 	private TreeMap<Integer, Long> combinedHouseRentsTable = new TreeMap<Integer, Long>();
