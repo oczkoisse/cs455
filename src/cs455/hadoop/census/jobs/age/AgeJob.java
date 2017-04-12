@@ -10,8 +10,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import java.io.IOException;
 
 import cs455.hadoop.census.io.LongList;
-import cs455.hadoop.census.io.DoubleList;
-
 
 /**
  * This is the main class. Hadoop will invoke the main method of this class.
@@ -37,7 +35,7 @@ public class AgeJob {
             // if the Mapper and Reducer has same key and value types. It is set separately for
             // elaboration.
             job.setOutputKeyClass(Text.class);
-            job.setOutputValueClass(DoubleList.class);
+            job.setOutputValueClass(Text.class);
             // path to input in HDFS
             FileInputFormat.addInputPath(job, new Path(args[0]));
             // path to output in HDFS

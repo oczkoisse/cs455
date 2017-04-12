@@ -9,7 +9,7 @@ import cs455.hadoop.census.io.LongList;
 import cs455.hadoop.census.io.DoubleList;
 
 
-public class AgeReducer extends Reducer<Text, LongList, Text, DoubleList> {
+public class AgeReducer extends Reducer<Text, LongList, Text, Text> {
     @Override
     protected void reduce(Text state, Iterable<LongList> ageCountsList, Context context) throws IOException, InterruptedException {
         
@@ -34,16 +34,13 @@ public class AgeReducer extends Reducer<Text, LongList, Text, DoubleList> {
         double female_grp_19_29 = l.get(5) * 100.0 / l.get(7);
         double female_grp_30_39 = l.get(6) * 100.0 / l.get(7);
         
-        DoubleList r = new DoubleList(null, 6);
-        
-        r.set(0,  male_grp_18);
-        r.set(1,  male_grp_19_29);
-        r.set(2,  male_grp_30_39);
-        
-        r.set(3,  female_grp_18);
-        r.set(4,  female_grp_19_29);
-        r.set(5,  female_grp_30_39);
-        
-        context.write(state, r);
+        context.write(state, new Text("\n" + 
+        		"Male% 1 - 18: " + male_grp_18 + "\n" +
+        		"Male% 19 - 29: " + male_grp_19_29 + "\n" +
+        		"Male% 30 - 39: " + male_grp_30_39 + "\n" +
+        		"Female% 1 - 18: " + female_grp_18 + "\n" +
+        		"Female% 19 - 29: " + female_grp_19_29 + "\n" +
+        		"Female% 30 - 39: " + female_grp_30_39 + "\n"
+        		));
     }
 }
