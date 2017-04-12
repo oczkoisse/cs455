@@ -37,7 +37,7 @@ public class MaritalJob {
             // if the Mapper and Reducer has same key and value types. It is set separately for
             // elaboration.
             job.setOutputKeyClass(Text.class);
-            job.setOutputValueClass(DoublePair.class);
+            job.setOutputValueClass(Text.class);
             // path to input in HDFS
             FileInputFormat.addInputPath(job, new Path(args[0]));
             // path to output in HDFS
